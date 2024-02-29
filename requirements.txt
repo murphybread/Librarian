@@ -1,0 +1,9 @@
+openai
+langchain
+tiktoken
+faiss-cpu
+pydantic
+docarray
+langchain-openai
+langchain-community
+boto3
