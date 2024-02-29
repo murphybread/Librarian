@@ -10,6 +10,7 @@ from langchain_core.runnables import RunnablePassthrough
 
 
 from langchain.text_splitter import CharacterTextSplitter
+from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.document_loaders import TextLoader
 
 
@@ -53,7 +54,8 @@ def get_text_response (query,llm_model):
     #Step 1: Loading and splitting documents: 
     loader = TextLoader("./example.txt")
     documents = loader.load()
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    #text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    text_splitter = SemanticChunker(OpenAIEmbeddings())
     docs = text_splitter.split_documents(documents)
     
     #Step 2: Embedding generation and FAISS database creation:
