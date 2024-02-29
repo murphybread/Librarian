@@ -2,6 +2,8 @@ import streamlit as st #모든 streamlit 명령은 "st" 별칭을 통해 사용�
 import RAG as rag #로컬 라이브러리 스크립트 참조
 
 
+os.environ['OPENAI_API_KEY'] = st.secrets.OPENAI_API_KEY
+
 st.set_page_config(page_title="Murphy's Library")
 st.title("Murphy's Library") #페이지 제목
 
