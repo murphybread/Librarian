@@ -1,11 +1,12 @@
+import os
 import streamlit as st #모든 streamlit 명령은 "st" 별칭을 통해 사용할 수 있습니다.
 import RAG as rag #로컬 라이브러리 스크립트 참조
 
 
-os.environ['OPENAI_API_KEY'] = st.secrets.OPENAI_API_KEY
-os.environ['AWS_ACCESS_KEY_ID'] = st.secrets.AWS_ACCESS_KEY_ID
-os.environ['AWS_SECRET_ACCESS_KEY'] = st.secrets.AWS_SECRET_ACCESS_KEY
-os.environ['AWS_DEFAULT_REGION'] = st.secrets.AWS_DEFAULT_REGION
+os.environ['OPENAI_API_KEY'] = st.secrets["OPENAI_API_KEY"]
+os.environ['AWS_ACCESS_KEY_ID'] = st.secrets["AWS_ACCESS_KEY_ID"]
+os.environ['AWS_SECRET_ACCESS_KEY'] = st.secrets["AWS_SECRET_ACCESS_KEY"]
+os.environ['AWS_DEFAULT_REGION'] = st.secrets["AWS_DEFAULT_REGION"]
 
 st.set_page_config(page_title="Murphy's Library")
 st.title("Murphy's Library") #페이지 제목
