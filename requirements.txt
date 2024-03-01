@@ -7,3 +7,4 @@ docarray
 langchain-openai
 langchain-community
 boto3
+langchain_experimental
