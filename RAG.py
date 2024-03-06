@@ -80,9 +80,9 @@ def get_text_response (query,llm_model):
     ])
     
     if hasattr(response, 'content'):
-        return response.content
+        return [response.content, retrieved_context]
     else:
-        return response  # Return the response directly if it doesn't have a 'content' attribute
+        return [response,retrieved_context]  # Return the response directly if it doesn't have a 'content' attribute
     
 def get_response_attribute (query,llm_model):
     
@@ -126,8 +126,6 @@ q = "What is your LLM model name?"
 
 llm_b = get_llm_aws_bedrock()
 llm_o = get_llm_openai()
-
-
 llm_4 = get_llm_openai("gpt-4-0125-preview")
 
 

@@ -1,2 +1,33 @@
 first docs
 about Learning English
+
+
+
+
+# How can I easily manage multiple git projects?
+#git_submodule
+
+
+## Audience
+ Users who want to manage multiple sub-projects within a single main project.
+
+## Features
+Sub-projects are managed as files within submodules, using the 'git submodule' command.
+Subprojects and the main project will each have their own git project, and will be managed separately from the main project
+Submodules are manged by .gitmodules file
+
+## Usage
+Here's a situation where you have a main project and a subproject, and you want to connect the two projects through a submodule
+
+Add submodule-specific information to a main project that doesn't have any submodules
+`git submodule add <git-submodule-url> <main-project-path>` 
+
+Set submodule-specific information locally with this commands
+`git submodule init`
+
+get directory sub module
+`git submoudle update` 
+
+Update git submodule files
+** Submodules are managed independently from the main project. So you have to do update manualy **
+`git submodule update --remote`
