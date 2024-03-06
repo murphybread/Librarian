@@ -50,7 +50,7 @@ if go_button:
             with tab1:
                 st.header("OpenAI")
                 if openai_choice == "none":
-                    st.write("# :orange[OpenAI models are not selected]")
+                    st.error("# :orange[OpenAI models are not selected]")
                 else:
                     
                     if openai_choice == model_name1:
@@ -64,7 +64,7 @@ if go_button:
             with tab2:
                 st.header("AWS Bedrock")
                 if aws_bedrock_choice == "none":
-                    st.write("# :orange[AWS Bedrock models are not selected]")
+                    st.error("AWS Bedrock models are not selected")
                 
                 else:
                     llm_model = llm_model_aws_bedrock
