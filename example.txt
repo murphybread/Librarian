@@ -1,33 +1,75 @@
-first docs
-about Learning English
+# TL;DR
+## 1. In the Linux shell, sometimes we need to view error logs created by commands.
+## 2. In Linux, there is a concept of file descriptors, which are represented by numbers for standard error and standard input/output.
+## 3. By using this concept, you can capture shell script logs, for example, with `command1 > execute.log 2>&1`.
 
 
 
+# Problem
+`If you run a Linux command in a different environment and want to know the result, even if it fails.`
 
-# How can I easily manage multiple git projects?
-#git_submodule
 
+while user directly command to terminal , but some times it executed by other environment. for schedule process using cron, or For devops in Pipeline etc... 
+
+usually using by `>` direction, you can get output of command when succeed. But when it failed , you can't get output of command.
+
+especially In devops , use many pipelines. when ever changed pipeline, user changed, authority changed , path chjaged, even network chaned...
+
+so i have to view log even when command is failed
+# Solution
+`Using file descriptor, you can get error log eighter`
+Expression
+> `Commnad1 > command1_output.log 2 > &1`
+
+There is concept in Linux that called file desciptor. This means express number some special process input,output , error.
+
+
+| Number | Descriptor      | Meaning                                                                                                                                             |
+| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0      | Standard Input  | Used for all input operations. It's the default source of input for programs (usually the keyboard). Can be redirected to a file, a pipe, etc.      |
+| 1      | Standard Output | Used for the output of programs. By default, it displays output to the terminal, but can be redirected to a file, a pipe, etc.                      |
+| 2      | Standard Error  | Used for error messages. By default, error messages are sent to the same place as standard output (the terminal), but can be redirected separately. |
+
+
+Let's break it down one by one,
+
+first block is that redirect successful output of command 1 to command1_output.log
+> `Command1 > command1_output.log
+
+second block is standard error makes to output.
+> `2 > &1`
+meaning is same `2 > 1` but & is should be attached. because for recognize stdouput to terminal, if didnt attached it, it can be recognized file name 1
+
+
+# Benefit and Limitation
+
+Benefit is that said first overview. we can get even error log of command when it execute in various environment
+Limitation is 2 things
+1. If the command itself was never executed, we won't find any traces
+2. This must be set for each command and each file for logging.
+
+
+# References
+https://inpa.tistory.com/entry/%EB%A6%AC%EB%88%85%EC%8A%A4-devnull-%EB%A6%AC%EB%8B%A4%EC%9D%B4%EB%A0%89%EC%85%98-%EA%B8%B0%ED%98%B8-%EC%A2%85%EB%A5%98
+
+
+
+#ssh #AWS 
+# SSH Tunneling
 
 ## Audience
- Users who want to manage multiple sub-projects within a single main project.
+Who wants to connect to a private server via Bastion with a single SSH command
 
 ## Features
-Sub-projects are managed as files within submodules, using the 'git submodule' command.
-Subprojects and the main project will each have their own git project, and will be managed separately from the main project
-Submodules are manged by .gitmodules file
-
+Connect to a private server with a single command
 ## Usage
-Here's a situation where you have a main project and a subproject, and you want to connect the two projects through a submodule
 
-Add submodule-specific information to a main project that doesn't have any submodules
-`git submodule add <git-submodule-url> <main-project-path>` 
+Use the options provided by SSH by default
+Required
+- Bastion 
+	- Bastion must have access to a private server
+- Local
+	- Local must have access to a Bastion server
 
-Set submodule-specific information locally with this commands
-`git submodule init`
-
-get directory sub module
-`git submoudle update` 
-
-Update git submodule files
-** Submodules are managed independently from the main project. So you have to do update manualy **
-`git submodule update --remote`
+Local Port->Bastion Port(=22) -> Private Server port
+`ssh -i [Pem key for accessing Bastion] -A -t ec2-user@[Bastion server IP] ssh -i [Pem key for accessing to Private server] ec2-user@[Private EC2 server IP]`
