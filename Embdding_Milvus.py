@@ -44,7 +44,7 @@ vector_store = Milvus(
     embedding_function=embeddings,
     connection_args=connection_args,
     collection_name=COLLECTION_NAME,
-    drop_old=True,
+    #drop_old=True,
 ).from_documents(
     all_splits,
     embedding=embeddings,
