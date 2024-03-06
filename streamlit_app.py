@@ -64,7 +64,7 @@ if go_button:
             with tab2:
                 st.header("AWS Bedrock")
                 if aws_bedrock_choice == "none":
-                    st.error("AWS Bedrock models are not selected")
+                    st.error("# AWS Bedrock models are not selected")
                 
                 else:
                     llm_model = llm_model_aws_bedrock
