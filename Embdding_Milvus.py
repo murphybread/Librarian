@@ -40,6 +40,19 @@ TOKEN = os.environ['MILVUS']
 COLLECTION_NAME = "Library"
 connection_args = { 'uri': "https://in03-881134e550fc1b4.api.gcp-us-west1.zillizcloud.com", 'token': TOKEN }
 
+template = """Use the following pieces of context to answer the question at the end. 
+If you don't know the answer, just say that you don't know, don't try to make up an answer. 
+Use three sentences maximum and keep the answer as concise as possible. 
+Always say "thanks for asking!" at the end of the answer. 
+{context}
+Question: {question}
+Helpful Answer:"""
+rag_prompt = ChatPromptTemplate.from_template(template)
+
+llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) 
+
+
+
 vector_store_E = Milvus(
     embedding_function=embeddings,
     connection_args=connection_args,
@@ -47,10 +60,20 @@ vector_store_E = Milvus(
     drop_old=False,
 )
 
-query = "Where do you live?"
+query = "What do yo favorite number is?"
 docs = vector_store_E.similarity_search(query)
-print(f'using exist collection {docs}')
 
+
+retriever_E = vector_store_E.as_retriever()
+
+rag_chain2 = (
+    {"context": retriever_E, "question": RunnablePassthrough()}
+    | rag_prompt
+    | llm
+)
+
+
+print(rag_chain2.invoke(query))
 
 print("----------md file embedded start to Milvus----------")
 vector_store = Milvus(
@@ -68,19 +91,10 @@ print("----------md file embedded end to Milvus----------")
 
 
 
-
-llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) 
 retriever = vector_store.as_retriever()
 
 
-template = """Use the following pieces of context to answer the question at the end. 
-If you don't know the answer, just say that you don't know, don't try to make up an answer. 
-Use three sentences maximum and keep the answer as concise as possible. 
-Always say "thanks for asking!" at the end of the answer. 
-{context}
-Question: {question}
-Helpful Answer:"""
-rag_prompt = ChatPromptTemplate.from_template(template)
+
 
 rag_chain = (
     {"context": retriever, "question": RunnablePassthrough()}
@@ -90,3 +104,4 @@ rag_chain = (
 
 
 print(rag_chain.invoke(query))
+
