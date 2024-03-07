@@ -1,10 +1,14 @@
-openai
+# RAG.py langchain,langchain_openai,langchain_community,langchain_core,langchain_experimental
 langchain
-tiktoken
-faiss-cpu
-pydantic
-docarray
 langchain-openai
 langchain-community
-boto3
 langchain_experimental
+
+#Milvus function openai,langchain,pymilvus,tiktoken,langchain_text_splitters
+openai
+pymilvus
+tiktoken
+langchain_text_splitters
+
+# Streamlit_app.py streamlit
+streamlit

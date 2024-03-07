@@ -40,27 +40,38 @@ TOKEN = os.environ['MILVUS']
 COLLECTION_NAME = "Library"
 connection_args = { 'uri': "https://in03-881134e550fc1b4.api.gcp-us-west1.zillizcloud.com", 'token': TOKEN }
 
+vector_store_E = Milvus(
+    embedding_function=embeddings,
+    connection_args=connection_args,
+    collection_name=COLLECTION_NAME,
+    drop_old=False,
+)
+
+query = "Where do you live?"
+docs = vector_store_E.similarity_search(query)
+print(f'using exist collection {docs}')
+
+
+print("----------md file embedded start to Milvus----------")
 vector_store = Milvus(
     embedding_function=embeddings,
     connection_args=connection_args,
     collection_name=COLLECTION_NAME,
-    #drop_old=True,
+    drop_old=True,
 ).from_documents(
     all_splits,
     embedding=embeddings,
     collection_name=COLLECTION_NAME,
     connection_args=connection_args,
 )
-
-query = "What is docs mainly mentioned it?"
-# docs = vector_store.similarity_search(query)
+print("----------md file embedded end to Milvus----------")
 
 
-print("----------md file embedded to Milvus----------")
+
 
 llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) 
 retriever = vector_store.as_retriever()
-print(f'retriever {retriever}')
+
 
 template = """Use the following pieces of context to answer the question at the end. 
 If you don't know the answer, just say that you don't know, don't try to make up an answer. 
