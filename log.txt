@@ -1,0 +1,19 @@
+Text-embedding-3-small 1219
+API requests
+56
+Tokens
+18,184
+
+
+Text-embedding-3-small 1227
+API requests
+60
+Tokens
+19,637
+
+
+Text-embedding-3-small 1241
+API requests
+64
+Tokens
+21,090

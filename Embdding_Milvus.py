@@ -5,6 +5,8 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
 
+from langchain_text_splitters import CharacterTextSplitter
+
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 
@@ -37,7 +39,7 @@ all_splits = text_splitter.split_documents(documents)
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 TOKEN = os.environ['MILVUS']
-COLLECTION_NAME = "Library"
+COLLECTION_NAME = "aa"
 connection_args = { 'uri': "https://in03-881134e550fc1b4.api.gcp-us-west1.zillizcloud.com", 'token': TOKEN }
 
 template = """Use the following pieces of context to answer the question at the end. 
@@ -60,6 +62,8 @@ vector_store_E = Milvus(
     drop_old=False,
 )
 
+
+
 query = "What do yo favorite number is?"
 docs = vector_store_E.similarity_search(query)
 
@@ -75,33 +79,81 @@ rag_chain2 = (
 
 print(rag_chain2.invoke(query))
 
-print("----------md file embedded start to Milvus----------")
-vector_store = Milvus(
-    embedding_function=embeddings,
-    connection_args=connection_args,
-    collection_name=COLLECTION_NAME,
-    drop_old=True,
-).from_documents(
-    all_splits,
-    embedding=embeddings,
-    collection_name=COLLECTION_NAME,
-    connection_args=connection_args,
-)
-print("----------md file embedded end to Milvus----------")
+print("-----------upsert start-----------")
+
+def update_entity(file_path):
+    expr = "source == '" + file_path + "'"
+    pks = vector_store_E.get_pks(expr)
+    if pks:
+        pk = pks  # Assuming there's only one matching entity
+        
+        # Get the existing document
+        retriever = vector_store_E.as_retriever()
+        existing_docs = retriever.get_relevant_documents(expr)
+        if existing_docs:
+            existing_doc = existing_docs[0]
+            print(f"upsert before: {existing_doc.page_content}")
+        else:
+            print("No existing text content found.")
+        
+        loader = TextLoader(file_path)
+        documents = loader.load()
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+        docs = text_splitter.split_documents(documents)
+        new_text = docs[0].page_content  # Assuming a single document
+        new_vector = embeddings.embed_query(new_text)
+
+        # Prepare the data for update
+        data = [[pk], [], [new_text], [new_vector]]
+
+
+        # Update the entity
+        vector_store_E.upsert(pk,data)
+
+        rt = vector_store_E.as_retriever(search_kwargs={"expr": 'source == "./number.txt"'})
+        dc = rt.get_relevant_documents(expr)
+        print("upsert after", end="")
+        if dc:
+            print(dc[0].page_content)
+        else:
+            print("No text content found after upsert.")
+
+        print(f"Entity with pk={pk} updated successfully.")
+    else:
+        print(f"No entity found for {file_path}")
+
+update_entity('./number.txt')
+
+# print("----------md file embedded start to Milvus----------")
+# vector_store = Milvus(
+#     embedding_function=embeddings,
+#     connection_args=connection_args,
+#     collection_name=COLLECTION_NAME,
+#     drop_old=True,
+# ).from_documents(
+#     all_splits,
+#     embedding=embeddings,
+#     collection_name=COLLECTION_NAME,
+#     connection_args=connection_args,
+# )
+# print("----------md file embedded end to Milvus----------")
 
 
 
-retriever = vector_store.as_retriever()
+# retriever = vector_store.as_retriever()
 
 
 
 
-rag_chain = (
-    {"context": retriever, "question": RunnablePassthrough()}
-    | rag_prompt
-    | llm
-)
+# rag_chain = (
+#     {"context": retriever, "question": RunnablePassthrough()}
+#     | rag_prompt
+#     | llm
+# )
 
 
-print(rag_chain.invoke(query))
+# print(rag_chain.invoke(query))
+# pks = vector_store.get_pks(expr)
+# print(pks)
+
 
