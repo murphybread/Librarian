@@ -13,6 +13,8 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnablePassthrough
 
 
+from langchain.docstore.document import Document
+
 documents = []
 for file in os.listdir():
     # if file.endswith('.pdf'):
@@ -81,48 +83,70 @@ print(rag_chain2.invoke(query))
 
 print("-----------upsert start-----------")
 
-def update_entity(file_path):
+def update_entity(file_path, vector_store):
     expr = "source == '" + file_path + "'"
-    pks = vector_store_E.get_pks(expr)
+    pks = vector_store.get_pks(expr)
+    
     if pks:
         pk = pks  # Assuming there's only one matching entity
         
+        
         # Get the existing document
-        retriever = vector_store_E.as_retriever()
+        
+        retrieverOptions = {
+            "expr": f'pk == {pk[0]}'
+        }
+        
+        retriever = vector_store.as_retriever(search_kwargs=retrieverOptions)
+        print(f'retriever: {retriever}')
+        
         existing_docs = retriever.get_relevant_documents(expr)
+        print(existing_docs)
+        print("++++++++++++++++++++++++++++++\n\n\n")
         if existing_docs:
             existing_doc = existing_docs[0]
             print(f"upsert before: {existing_doc.page_content}")
         else:
             print("No existing text content found.")
         
-        loader = TextLoader(file_path)
-        documents = loader.load()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-        docs = text_splitter.split_documents(documents)
-        new_text = docs[0].page_content  # Assuming a single document
-        new_vector = embeddings.embed_query(new_text)
+        # loader = TextLoader(file_path)
+        # documents = loader.load()
+        # text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+        # docs = text_splitter.split_documents(documents)
+        # new_text = docs[0].page_content  # Assuming a single document
+        # new_vector = embeddings.embed_query(new_text)
 
-        # Prepare the data for update
-        data = [[pk], [], [new_text], [new_vector]]
+        # # Prepare the data for update
+        # data = [[pk], [], [new_text], [new_vector]]
+        # data = Document(page_content=new_text,
+        #     metatdata={
+        #         "source": file_path,
+        #         "pk": pk,
+        #         "vector": new_vector
+        #     }
+        # )
 
 
-        # Update the entity
-        vector_store_E.upsert(pk,data)
+        # # Update the entity
+        # vector_store.upsert(pk,data)
 
-        rt = vector_store_E.as_retriever(search_kwargs={"expr": 'source == "./number.txt"'})
-        dc = rt.get_relevant_documents(expr)
-        print("upsert after", end="")
-        if dc:
-            print(dc[0].page_content)
-        else:
-            print("No text content found after upsert.")
+        # retriever = vector_store.as_retriever(search_kwargs={'filter': {'source': file_path}})
+        # existing_docs = retriever.get_relevant_documents()
+        # print(existing_docs)
+        # print("++++++++++++++++++++++++++++++\n\n\n")
+        # if existing_docs:
+        #     existing_doc = existing_docs[0]
+        #     print(f"upsert after: {existing_doc.page_content}")
+        # else:
+        #     print("No existing text content found.")
 
         print(f"Entity with pk={pk} updated successfully.")
     else:
         print(f"No entity found for {file_path}")
 
-update_entity('./number.txt')
+update_entity('./number.txt',vector_store_E)
+
+
 
 # print("----------md file embedded start to Milvus----------")
 # vector_store = Milvus(
