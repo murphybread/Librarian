@@ -1,5 +1,4 @@
 import os
-from langchain_community.document_loaders import TextLoader
 from langchain_community.vectorstores import Milvus
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -16,6 +15,7 @@ from langchain.schema.runnable import RunnablePassthrough
 from langchain.docstore.document import Document
 
 documents = []
+
 for file in os.listdir():
     # if file.endswith('.pdf'):
     #     pdf_path = './docs/' + file
@@ -41,7 +41,7 @@ all_splits = text_splitter.split_documents(documents)
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 TOKEN = os.environ['MILVUS']
-COLLECTION_NAME = "aa"
+COLLECTION_NAME = "cc"
 connection_args = { 'uri': "https://in03-881134e550fc1b4.api.gcp-us-west1.zillizcloud.com", 'token': TOKEN }
 
 template = """Use the following pieces of context to answer the question at the end. 
@@ -62,6 +62,8 @@ vector_store_E = Milvus(
     connection_args=connection_args,
     collection_name=COLLECTION_NAME,
     drop_old=False,
+    auto_id=True
+    
 )
 
 
@@ -81,93 +83,92 @@ rag_chain2 = (
 
 print(rag_chain2.invoke(query))
 
-print("-----------upsert start-----------")
+
 
 def update_entity(file_path, vector_store):
-    expr = "source == '" + file_path + "'"
+    print("-----------upsert start-----------")
+    expr = f"source == '{file_path}'"
     pks = vector_store.get_pks(expr)
     
+    # Load new documents to be inserted
+    loader = TextLoader(file_path, encoding='utf-8')
+    documents = loader.load()
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    docs = text_splitter.split_documents(documents)  # Define 'docs' outside the if block
+
     if pks:
-        pk = pks  # Assuming there's only one matching entity
+        # Prepare retrieval options
+        retrieverOptions = {"expr": f"pk == {pks[0]}"}
         
-        
-        # Get the existing document
-        
-        retrieverOptions = {
-            "expr": f'pk == {pk[0]}'
-        }
-        
+        # Retrieve existing documents
         retriever = vector_store.as_retriever(search_kwargs=retrieverOptions)
-        print(f'retriever: {retriever}')
-        
         existing_docs = retriever.get_relevant_documents(expr)
         print(existing_docs)
-        print("++++++++++++++++++++++++++++++\n\n\n")
+        
+        # Check if documents exist and print information
         if existing_docs:
             existing_doc = existing_docs[0]
             print(f"upsert before: {existing_doc.page_content}")
         else:
             print("No existing text content found.")
+
+        # Delete the outdated entity
+        vector_store.delete(pks)
+
+        print(f'docs : {docs}, docs_type: {type(docs)}')
+        # Add the new documents to the vector store after deletion
+        vector_store.add_documents(docs)
         
-        # loader = TextLoader(file_path)
-        # documents = loader.load()
-        # text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-        # docs = text_splitter.split_documents(documents)
-        # new_text = docs[0].page_content  # Assuming a single document
-        # new_vector = embeddings.embed_query(new_text)
-
-        # # Prepare the data for update
-        # data = [[pk], [], [new_text], [new_vector]]
-        # data = Document(page_content=new_text,
-        #     metatdata={
-        #         "source": file_path,
-        #         "pk": pk,
-        #         "vector": new_vector
-        #     }
-        # )
-
-
-        # # Update the entity
-        # vector_store.upsert(pk,data)
-
-        # retriever = vector_store.as_retriever(search_kwargs={'filter': {'source': file_path}})
-        # existing_docs = retriever.get_relevant_documents()
-        # print(existing_docs)
-        # print("++++++++++++++++++++++++++++++\n\n\n")
-        # if existing_docs:
-        #     existing_doc = existing_docs[0]
-        #     print(f"upsert after: {existing_doc.page_content}")
-        # else:
-        #     print("No existing text content found.")
-
-        print(f"Entity with pk={pk} updated successfully.")
+        # Fetch the primary keys for new documents based on the same expression
+        new_pks = vector_store.get_pks(expr)
+        
+        # Print the information about deletion and creation
+        print(f"Entity with pk={pks} deleted and new entity created with pk={new_pks}.")
     else:
-        print(f"No entity found for {file_path}")
+        print(f"No entity found for {file_path}. Creating entity...")
+        # This is where 'docs' is now available to use because it's been defined outside the 'if' condition
+        vector_store.add_documents(docs)
+        print("New entity created.")
 
-update_entity('./number.txt',vector_store_E)
+    print("-----------Upsert finished-----------")
+
+# Call the function
+update_entity('./test.txt', vector_store_E)
 
 
+DEFAULT_MILVUS_CONNECTION = {
+    "host": "localhost",
+    "port": "19530",
+    "user": "",
+    "password": "",
+    "secure": False,
+    'uri': "https://example.zillizcloud.com",
+    'token': "token"
+}
 
-# print("----------md file embedded start to Milvus----------")
-# vector_store = Milvus(
-#     embedding_function=embeddings,
-#     connection_args=connection_args,
-#     collection_name=COLLECTION_NAME,
-#     drop_old=True,
-# ).from_documents(
-#     all_splits,
-#     embedding=embeddings,
-#     collection_name=COLLECTION_NAME,
-#     connection_args=connection_args,
-# )
-# print("----------md file embedded end to Milvus----------")
+def Create_collection_from_docs(embedding,splits,collection_name="default_collection_name", connection_args=DEFAULT_MILVUS_CONNECTION):
+    
+    print("----------Embedding started to Milvus----------")
+    vector_store = Milvus(
+    embedding_function=embeddings,
+    connection_args=connection_args,
+    collection_name=collection_name,
+    drop_old=True,
+    auto_id=True,
+    
+    ).from_documents(
+    splits,
+    embedding=embeddings,
+    collection_name=collection_name,
+    connection_args=connection_args,
+    )
 
+    print("----------Embedding finished to Milvus----------")
+
+# Create_collection_from_docs(embeddings,all_splits,COLLECTION_NAME,connection_args )
 
 
 # retriever = vector_store.as_retriever()
-
-
-
 
 # rag_chain = (
 #     {"context": retriever, "question": RunnablePassthrough()}
@@ -177,7 +178,4 @@ update_entity('./number.txt',vector_store_E)
 
 
 # print(rag_chain.invoke(query))
-# pks = vector_store.get_pks(expr)
-# print(pks)
-
 
