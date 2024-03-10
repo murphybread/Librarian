@@ -14,29 +14,6 @@ from langchain.schema.runnable import RunnablePassthrough
 
 from langchain.docstore.document import Document
 
-documents = []
-
-for file in os.listdir():
-    # if file.endswith('.pdf'):
-    #     pdf_path = './docs/' + file
-    #     loader = PyPDFLoader(pdf_path)
-    #     documents.extend(loader.load())
-    # elif file.endswith('.docx') or file.endswith('.doc'):
-    #     doc_path = './docs/' + file
-    #     loader = Docx2txtLoader(doc_path)
-    #     documents.extend(loader.load())
-    if file.endswith('.txt'):
-        text_path = './' + file
-        loader = TextLoader(text_path)
-        documents.extend(loader.load())
-
-# loader = TextLoader("./example.txt")
-# docs = loader.load()
-
-
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-all_splits = text_splitter.split_documents(documents)
-
 
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
@@ -57,31 +34,59 @@ llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
 
 
 
-vector_store_E = Milvus(
+def split_mutiple_documents(current_path):
+    documents = []
+
+    for file in os.listdir():
+        # if file.endswith('.pdf'):
+        #     pdf_path = './docs/' + file
+        #     loader = PyPDFLoader(pdf_path)
+        #     documents.extend(loader.load())
+        # elif file.endswith('.docx') or file.endswith('.doc'):
+        #     doc_path = './docs/' + file
+        #     loader = Docx2txtLoader(doc_path)
+        #     documents.extend(loader.load())
+        if file.endswith('.txt'):
+            text_path = current_path + file
+            loader = TextLoader(text_path)
+            documents.extend(loader.load())
+        if file.endswith('.md'):
+            text_path = current_path + file
+            loader = TextLoader(text_path)
+            documents.extend(loader.load())
+
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    all_splits = text_splitter.split_documents(documents)
+    return all_splits
+
+
+docs_splits = split_mutiple_documents('./')
+
+
+
+def invoke_from_retriever(query,embeddings, llm ,connection_args):
+    
+    vector_store_exist = Milvus(
     embedding_function=embeddings,
     connection_args=connection_args,
     collection_name=COLLECTION_NAME,
     drop_old=False,
     auto_id=True
+    )
     
-)
+    
+    docs = vector_store_exist.similarity_search(query)
+    
+    retriever_exist = vector_store_exist.as_retriever()
+    rag_chain = (
+    {"context": retriever_exist, "question": RunnablePassthrough()} | rag_prompt | llm )
+    
+    return rag_chain.invoke(query)
 
 
 
-query = "What do yo favorite number is?"
-docs = vector_store_E.similarity_search(query)
 
 
-retriever_E = vector_store_E.as_retriever()
-
-rag_chain2 = (
-    {"context": retriever_E, "question": RunnablePassthrough()}
-    | rag_prompt
-    | llm
-)
-
-
-print(rag_chain2.invoke(query))
 
 
 
@@ -133,7 +138,7 @@ def update_entity(file_path, vector_store):
     print("-----------Upsert finished-----------")
 
 # Call the function
-update_entity('./test.txt', vector_store_E)
+update_entity('./010.00 b.md', vector_store_exist)
 
 
 DEFAULT_MILVUS_CONNECTION = {
@@ -165,17 +170,11 @@ def Create_collection_from_docs(embedding,splits,collection_name="default_collec
 
     print("----------Embedding finished to Milvus----------")
 
-# Create_collection_from_docs(embeddings,all_splits,COLLECTION_NAME,connection_args )
 
 
-# retriever = vector_store.as_retriever()
-
-# rag_chain = (
-#     {"context": retriever, "question": RunnablePassthrough()}
-#     | rag_prompt
-#     | llm
-# )
 
 
-# print(rag_chain.invoke(query))
+
+Create_collection_from_docs(embeddings,docs_splits,COLLECTION_NAME,connection_args )
+
 
