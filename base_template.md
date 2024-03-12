@@ -1,5 +1,5 @@
 ## 000\000.md
- description: All base about IT_Knowledge
+ description: All base about IT_Knowledge, This part describe aboubase Knowledge and English and Insight about Trends too
 
 ## 100\100.md
  description: No description provided
@@ -113,7 +113,7 @@
  description: No description provided
 
 ## 200\210\210.20\210.20 a.md
- description: No description provided
+ description: The solution about Gitlab. GitLab is one devsecops solution and can be installed for enterprise
 
 ## 200\210\210.20\210.20.md
  description: No description provided
@@ -271,6 +271,9 @@
 ## 600\630\630.md
  description: No description provided
 
+## 600\640\640.md
+ description: No description provided
+
 ## 600\610\610.00\610.00 a.md
  description: No description provided
 
@@ -323,6 +326,12 @@
  description: No description provided
 
 ## 600\630\630.40\630.40.md
+ description: No description provided
+
+## 600\640\640.00\640.00 a.md
+ description: No description provided
+
+## 600\640\640.00\640.00.md
  description: No description provided
 
 ## 700\710\710.md

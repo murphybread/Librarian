@@ -2,6 +2,8 @@ import os
 import streamlit as st #모든 streamlit 명령은 "st" 별칭을 통해 사용할 수 있습니다.
 import RAG as rag #로컬 라이브러리 스크립트 참조
 
+import Embedding_Milvus as em
+
 
 os.environ['OPENAI_API_KEY'] = st.secrets["OPENAI_API_KEY"]
 os.environ['AWS_ACCESS_KEY_ID'] = st.secrets["AWS_ACCESS_KEY_ID"]
@@ -21,6 +23,10 @@ model_name3 = 'amazon.titan-text-express-v1'
 llm_model_openai_gpt3_5 = rag.get_llm_openai(model_name1)
 llm_model_openai_gpt4 = rag.get_llm_openai(model_name2)
 llm_model_aws_bedrock = rag.get_llm_aws_bedrock(model_name3)
+
+
+if 'initial' not in st.seesion.state:
+    st.seesion.state['initial'] = True
 
 # Use sidebar for model selection
 with st.sidebar:
