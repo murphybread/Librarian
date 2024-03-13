@@ -26,6 +26,7 @@ llm_model_aws_bedrock = rag.get_llm_aws_bedrock(model_name3)
 
 
 if 'initial' not in st.seesion.state:
+    
     st.seesion.state['initial'] = True
 
 # Use sidebar for model selection
