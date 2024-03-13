@@ -20,6 +20,17 @@ from langchain.docstore.document import Document
 TOKEN = os.environ['MILVUS']
 COLLECTION_NAME = "Library"
 connection_args = { 'uri': "https://in03-881134e550fc1b4.api.gcp-us-west1.zillizcloud.com", 'token': TOKEN }
+
+
+DEFAULT_MILVUS_CONNECTION = {
+    "host": "localhost",
+    "port": "19530",
+    "user": "",
+    "password": "",
+    "secure": False,
+    'uri': "https://example.zillizcloud.com",
+    'token': "token"
+}
     
 def load_base_template(file_path):
     try:
@@ -37,8 +48,9 @@ def langchain_template():
     If you don't know the answer, just say that you don't know, don't try to make up an answer. 
     Use three sentences maximum and keep the answer as concise as possible. 
     Always answer with description and file_path about file.
-    {initial_context}
-    {context}
+    initial_context: {initial_context}
+    
+    context: {context}
     Question: {question}
     Helpful Answer:"""
     rag_prompt = ChatPromptTemplate.from_template(template)
@@ -46,7 +58,7 @@ def langchain_template():
     return rag_prompt
     
 
-llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) 
+
 
 
 
@@ -110,11 +122,12 @@ initial_context = './base_template.md'
 docs_splits = split_mutiple_documents('./')
 prompt_template = langchain_template()
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.03) 
 
 vector_store = vector_store_milvus(embeddings, connection_args, COLLECTION_NAME )
 
-answer1 = invoke_from_retriever("what is number of Gitlab article?" , vector_store, llm, prompt_template)
-answer2 = invoke_from_retriever("what is number Gitlab article" , vector_store, llm, prompt_template, initial_context)
+answer1 = invoke_from_retriever("what is article number about Industry background?" , vector_store, llm, prompt_template)
+answer2 = invoke_from_retriever("what is article number about Industry background?" , vector_store, llm, prompt_template, initial_context)
 
 
 print(answer1)
@@ -174,15 +187,7 @@ def update_entity(file_path, vector_store):
 # update_entity('./010.00 b.md', vector_store_exist)
 
 
-DEFAULT_MILVUS_CONNECTION = {
-    "host": "localhost",
-    "port": "19530",
-    "user": "",
-    "password": "",
-    "secure": False,
-    'uri': "https://example.zillizcloud.com",
-    'token': "token"
-}
+
 
 def Create_collection_from_docs(splits, embeddings,collection_name="default_collection_name", connection_args=DEFAULT_MILVUS_CONNECTION):
     
@@ -208,6 +213,6 @@ def Create_collection_from_docs(splits, embeddings,collection_name="default_coll
 
 
 
-Create_collection_from_docs(docs_splits, embeddings ,COLLECTION_NAME,connection_args )
+# Create_collection_from_docs(docs_splits, embeddings ,COLLECTION_NAME,connection_args )
 
 

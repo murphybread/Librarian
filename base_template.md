@@ -86,7 +86,7 @@
  description: No description provided
 
 ## 000\090\090.00\090.00.md
- description: No description provided
+ description: Understand the trends, updates, and historical context of the industry background
 
 ## 000\090\090.10\090.10 a.md
  description: No description provided
