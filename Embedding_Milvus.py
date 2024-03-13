@@ -9,14 +9,14 @@ from langchain_text_splitters import CharacterTextSplitter
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 
-from langchain.schema.runnable import RunnablePassthrough
+from langchain.schema.runnable import RunnablePassthrough, RunnableParallel, RunnableLambda
 
 
 from langchain.docstore.document import Document
 
 
 
-embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+
 TOKEN = os.environ['MILVUS']
 COLLECTION_NAME = "Library"
 connection_args = { 'uri': "https://in03-881134e550fc1b4.api.gcp-us-west1.zillizcloud.com", 'token': TOKEN }
@@ -89,36 +89,32 @@ def vector_store_milvus(embeddings , connection_args, collection_name="default_c
     return vector_store
 
 
-def invoke_from_retriever(query,vector_store ,llm , prompt_template):
-    
-    docs = vector_store.similarity_search(query)
-    retriever_exist = vector_store.as_retriever()
-    
-    rag_chain = (
-    {"initial_context": load_base_template(''), "context": retriever_exist, "question": RunnablePassthrough()} | prompt_template | llm )
-    
-    
-    return rag_chain.invoke(query)
 
-def initial_invoke_from_retriever(base_template_path ,query,vector_store ,llm , prompt_template):
-    
-    docs = vector_store.similarity_search(query)
-    retriever_exist = vector_store.as_retriever()
-    
-    
-    rag_chain = (
-    {"initial_context": load_base_template(base_template_path), "context": retriever_exist, "question": RunnablePassthrough()} | prompt_template | llm )
-    
-    return rag_chain.invoke(query)
+def invoke_from_retriever(query, vector_store, llm, prompt_template, base_template_path=''):
+    # Load the initial context
+    initial_context_content = load_base_template(base_template_path)
+
+    # Set up the components of the chain.
+    setup_and_retrieval = RunnableParallel(
+        initial_context=RunnableLambda(lambda _: initial_context_content),  # Use RunnableLambda for static content
+        context=vector_store.as_retriever(),
+        question=RunnablePassthrough()  # This can just pass the question as is
+    )
+
+    # Construct and invoke the chain
+    rag_chain = setup_and_retrieval | prompt_template | llm
+    return rag_chain.invoke(query)  
 
 
 initial_context = './base_template.md'
 docs_splits = split_mutiple_documents('./')
 prompt_template = langchain_template()
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+
 vector_store = vector_store_milvus(embeddings, connection_args, COLLECTION_NAME )
 
 answer1 = invoke_from_retriever("what is number of Gitlab article?" , vector_store, llm, prompt_template)
-answer2 = initial_invoke_from_retriever(initial_context,"what is number Gitlab article" , vector_store, llm, prompt_template)
+answer2 = invoke_from_retriever("what is number Gitlab article" , vector_store, llm, prompt_template, initial_context)
 
 
 print(answer1)
