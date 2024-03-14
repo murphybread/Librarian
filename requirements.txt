@@ -3,6 +3,7 @@ langchain
 langchain-openai
 langchain_community
 langchain_experimental
+boto3
 
 #Milvus function openai,langchain,pymilvus,tiktoken,langchain_text_splitters
 openai
