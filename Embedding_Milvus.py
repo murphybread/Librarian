@@ -20,7 +20,7 @@ from langchain.docstore.document import Document
 MILVUS_TOKEN = os.environ['MILVUS_TOKEN']
 MILVUS_URI= os.environ['MILVUS_URI']
 COLLECTION_NAME = "Library"
-connection_args = { 'uri': MILVUS_URI, 'token': TOKEN }
+connection_args = { 'uri': MILVUS_URI, 'token': MILVUS_TOKEN }
 
 
 DEFAULT_MILVUS_CONNECTION = {

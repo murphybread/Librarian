@@ -2,7 +2,7 @@
 langchain
 langchain-openai
 langchain-community
-langchain_experimental
+langchain-experimental
 boto3
 langchain_core
 faiss-cpu
