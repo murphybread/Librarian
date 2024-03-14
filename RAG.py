@@ -122,13 +122,13 @@ def get_response_attribute (query,llm_model):
     
 
 
-q = "What is your LLM model name?"
+# q = "What is your LLM model name?"
 
-llm_b = get_llm_aws_bedrock()
-llm_o = get_llm_openai()
-llm_4 = get_llm_openai("gpt-4-0125-preview")
+# llm_b = get_llm_aws_bedrock()
+# llm_o = get_llm_openai()
+# llm_4 = get_llm_openai("gpt-4-0125-preview")
 
 
-print(get_text_response(q, llm_o))
-print(get_text_response(q, llm_b))
-print(get_text_response(q, llm_4))
+# print(get_text_response(q, llm_o))
+# print(get_text_response(q, llm_b))
+# print(get_text_response(q, llm_4))

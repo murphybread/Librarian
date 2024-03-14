@@ -17,9 +17,10 @@ from langchain.docstore.document import Document
 
 
 
-TOKEN = os.environ['MILVUS']
+MILVUS_TOKEN = os.environ['MILVUS_TOKEN']
+MILVUS_URI = os.environ['MILVUS_URI']
 COLLECTION_NAME = "Library"
-connection_args = { 'uri': "https://in03-881134e550fc1b4.api.gcp-us-west1.zillizcloud.com", 'token': TOKEN }
+connection_args = { 'uri': MILVUS_URI, 'token': MILVUS_TOKEN }
 
 
 DEFAULT_MILVUS_CONNECTION = {
@@ -126,12 +127,12 @@ llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.03)
 
 vector_store = vector_store_milvus(embeddings, connection_args, COLLECTION_NAME )
 
-answer1 = invoke_from_retriever("what is article number about Industry background?" , vector_store, llm, prompt_template)
-answer2 = invoke_from_retriever("what is article number about Industry background?" , vector_store, llm, prompt_template, initial_context)
+# answer1 = invoke_from_retriever("what is article number about Industry background?" , vector_store, llm, prompt_template)
+# answer2 = invoke_from_retriever("what is article number about Industry background?" , vector_store, llm, prompt_template, initial_context)
 
 
-print(answer1)
-print(answer2)
+# print(answer1)
+# print(answer2)
 
 
 
