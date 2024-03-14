@@ -1,10 +1,11 @@
 # RAG.py langchain,langchain_openai,langchain_community,langchain_core,langchain_experimental
 langchain
 langchain-openai
-langchain_community
+langchain-community
 langchain_experimental
 boto3
 langchain_core
+faiss-cpu
 
 #Milvus function openai,langchain,pymilvus,tiktoken,langchain_text_splitters
 openai
