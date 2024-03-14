@@ -17,9 +17,10 @@ from langchain.docstore.document import Document
 
 
 
-TOKEN = os.environ['MILVUS']
+MILVUS_TOKEN = os.environ['MILVUS_TOKEN']
+MILVUS_URI= os.environ['MILVUS_URI']
 COLLECTION_NAME = "Library"
-connection_args = { 'uri': "https://in03-881134e550fc1b4.api.gcp-us-west1.zillizcloud.com", 'token': TOKEN }
+connection_args = { 'uri': MILVUS_URI, 'token': TOKEN }
 
 
 DEFAULT_MILVUS_CONNECTION = {
