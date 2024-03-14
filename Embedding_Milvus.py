@@ -18,11 +18,7 @@ from langchain.docstore.document import Document
 
 
 MILVUS_TOKEN = os.environ['MILVUS_TOKEN']
-<<<<<<< HEAD
 MILVUS_URI = os.environ['MILVUS_URI']
-=======
-MILVUS_URI= os.environ['MILVUS_URI']
->>>>>>> 98ba950371338e52ed96367865c1a85671b1e149
 COLLECTION_NAME = "Library"
 connection_args = { 'uri': MILVUS_URI, 'token': MILVUS_TOKEN }
 
@@ -221,3 +217,7 @@ def Create_collection_from_docs(splits, embeddings,collection_name="default_coll
 # Create_collection_from_docs(docs_splits, embeddings ,COLLECTION_NAME,connection_args )
 
 
+
+from langchain.memory import ConversationBufferMemory
+
+memory = ConversationBufferMemory(memory_key="chat_history")
