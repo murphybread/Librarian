@@ -145,6 +145,8 @@ def invoke_from_retriever(query, vector_store, llm, prompt_template, base_templa
 
 initial_context = './base_template.md'
 docs_splits = split_mutiple_documents('./')
+
+
 prompt_template = langchain_template()
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.03) 
@@ -176,11 +178,19 @@ conversation_with_summary = ConversationChain(
     memory=memory,
     verbose=True,
     prompt=prompt_template,
-
+    metadata={'source': 'test.txt','text': 'test'}
 )
+print(memory)
+
+embedded_query = embeddings.embed_query("What was the name mentioned in the conversation?")
+print(embedded_query[0])
+print(embedded_query)
+print(conversation_with_summary)
 
 
-print(conversation_with_summary.input_schema.schema())
+
+
+
 print(conversation_with_summary.invoke("What your name?").output_schema.schema())
 
 #print(conversation_with_summary.invoke(""))
@@ -223,7 +233,7 @@ def update_entity(file_path, vector_store):
     # Load new documents to be inserted
     loader = TextLoader(file_path, encoding='utf-8')
     documents = loader.load()
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=0)
     docs = text_splitter.split_documents(documents)  # Define 'docs' outside the if block
 
     if pks:
