@@ -21,9 +21,10 @@ from langchain.memory import ConversationBufferMemory, ConversationBufferWindowM
 from langchain.chains import ConversationChain
 
 
+import streamlit as st
 
-MILVUS_TOKEN = os.environ['MILVUS_TOKEN']
-MILVUS_URI = os.environ['MILVUS_URI']
+MILVUS_TOKEN = st.secrets['MILVUS']['MILVUS_TOKEN']
+MILVUS_URI = st.secrets['MILVUS']['MILVUS_URI']
 COLLECTION_NAME = "Library"
 connection_args = { 'uri': MILVUS_URI, 'token': MILVUS_TOKEN }
 
@@ -166,8 +167,6 @@ memory = VectorStoreRetrieverMemory(retriever=retriever, ai_prefix="AI Assistant
 
 
 
-
-
 # --------------
 
 # memory=ConversationBufferWindowMemory(k=10,memory_key="history",ai_prefix="AI Assistant")
@@ -180,7 +179,13 @@ conversation_with_summary = ConversationChain(
 
 )
 
-print(conversation_with_summary.invoke({"input": "제 이름이 무엇이었는지 기억하세요?"}))
+
+print(conversation_with_summary.input_schema.schema())
+print(conversation_with_summary.invoke("What your name?").output_schema.schema())
+
+#print(conversation_with_summary.invoke(""))
+
+
 # output = conversation_with_summary.predict(input="Hi, my name is Perry, what's up?")
 
 # print(output['response'])
