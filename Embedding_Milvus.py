@@ -16,6 +16,10 @@ from langchain.docstore.document import Document
 
 
 
+from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory
+from langchain.chains import ConversationChain
+
+
 
 MILVUS_TOKEN = os.environ['MILVUS_TOKEN']
 MILVUS_URI = os.environ['MILVUS_URI']
@@ -45,24 +49,22 @@ def load_base_template(file_path):
 
 
 def langchain_template():
-    template = """ Answer using history as context
-    If you don't know the answer, just say that you don't know, don't try to make up an answer. 
-    Use three sentences maximum and keep the answer as concise as possible. 
+    template = """ 
+Answer using history as context
+If you don't know the answer, just say that you don't know, don't try to make up an answer. 
+Use three sentences maximum and keep the answer as concise as possible. 
+Always answer with description and file_path about file.
+
+history
+{history}
     
-    Always answer with description and file_path about file.
-    history
-    {history}
-    
-    Current conversation:
-    Human: {input}
-    AI assistant:
-    """
+Current conversation:
+Human: {input}
+AI assistant:"""
     rag_prompt = ChatPromptTemplate.from_template(template)
     
     return rag_prompt
     
-
-
 
 
 
@@ -122,13 +124,13 @@ def invoke_from_retriever(query, vector_store, llm, prompt_template, base_templa
     return rag_chain.invoke(query)  
 
 
-# initial_context = './base_template.md'
-# docs_splits = split_mutiple_documents('./')
-# prompt_template = langchain_template()
-# embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-# llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.03) 
+initial_context = './base_template.md'
+docs_splits = split_mutiple_documents('./')
+prompt_template = langchain_template()
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.03) 
 
-# vector_store = vector_store_milvus(embeddings, connection_args, COLLECTION_NAME )
+vector_store = vector_store_milvus(embeddings, connection_args, COLLECTION_NAME )
 
 # answer1 = invoke_from_retriever("what is article number about Industry background?" , vector_store, llm, prompt_template)
 # answer2 = invoke_from_retriever("what is article number about Industry background?" , vector_store, llm, prompt_template, initial_context)
@@ -191,8 +193,6 @@ def update_entity(file_path, vector_store):
 # update_entity('./010.00 b.md', vector_store_exist)
 
 
-
-
 def Create_collection_from_docs(splits, embeddings,collection_name="default_collection_name", connection_args=DEFAULT_MILVUS_CONNECTION):
     
     print("----------Embedding started to Milvus----------")
@@ -223,62 +223,36 @@ def Create_collection_from_docs(splits, embeddings,collection_name="default_coll
 
 
 
-from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory
-from langchain.chains import ConversationChain
 
 
-
-
-
-
-
-
-
-
-
-# memory.save_context({"input": "hi"}, {"output": "whats up"})
-# memory.save_context({"input": "not much you"}, {"output": "not much"})
-
-
-# print(memory,memory.save_context)
-# print(memory.load_memory_variables({}))
-
-####
-    # setup_and_retrieval = RunnableParallel(
-    #     history_chat=RunnableLambda(lambda _: initial_context_content),  # Use RunnableLambda for static content
-    #     context=vector_store.as_retriever(),
-    #     question=RunnablePassthrough()  # This can just pass the question as is
-    # )
-
-####
 prompt = langchain_template()
 llm = ChatOpenAI(model_name="gpt-4-0125-preview", temperature=0.03)
-memory=ConversationBufferWindowMemory(k=5,memory_key="history",ai_prefix="AI Assistant")
+memory=ConversationBufferWindowMemory(k=10,memory_key="history",ai_prefix="AI Assistant")
 
 # print(memory)
 # print(memory.load_memory_variables({}))
 
 
-template = """The following is a friendly conversation between a human and an AI. The AI is talkative and provides lots of specific details from its context. If the AI does not know the answer to a question, it truthfully says it does not know.
+template = langchain_template()
 
-{history}
 
-Current conversation:
-Human: {input}
-AI Assistant:"""
-PROMPT = ChatPromptTemplate.from_template(template=template)
 
 conversation_with_summary = ConversationChain(
     llm=llm,
     memory=memory,
     verbose=True,
-    prompt=PROMPT
+    prompt=template,
+
 )
 output = conversation_with_summary.invoke("blue or red which color has high energy?")
+
+
+
+
 print(output['response'])
 
 
-print (conversation_with_summary.predict(input="Hello, write postfix number of our chat whenerver we talked for example AI Assistatnt :~~~~~ 1"))
+print (conversation_with_summary.predict(input="Hello, write postfix number of our chat whenerver we talked for example your answer ... 1"))
 
 print(conversation_with_summary.predict(input="What's the question just before?"))
 
