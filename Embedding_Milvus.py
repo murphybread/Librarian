@@ -255,8 +255,8 @@ prompt = langchain_template()
 llm = ChatOpenAI(model_name="gpt-4-0125-preview", temperature=0.03)
 memory=ConversationBufferWindowMemory(k=5,memory_key="history",ai_prefix="AI Assistant")
 
-print(memory)
-print(memory.load_memory_variables({}))
+# print(memory)
+# print(memory.load_memory_variables({}))
 
 
 template = """The following is a friendly conversation between a human and an AI. The AI is talkative and provides lots of specific details from its context. If the AI does not know the answer to a question, it truthfully says it does not know.
@@ -274,13 +274,15 @@ conversation_with_summary = ConversationChain(
     verbose=True,
     prompt=PROMPT
 )
+output = conversation_with_summary.invoke("blue or red which color has high energy?")
+print(output['response'])
 
 
 print (conversation_with_summary.predict(input="Hello, write postfix number of our chat whenerver we talked for example AI Assistatnt :~~~~~ 1"))
 
 print(conversation_with_summary.predict(input="What's the question just before?"))
 
-print(conversation_with_summary.predict(input="What's the color is more high ernergy?"))
+print(conversation_with_summary.predict(input="What's climate is in east Asia"))
 
 print(conversation_with_summary.predict(input="What's the weather today??"))
 
