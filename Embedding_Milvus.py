@@ -155,6 +155,28 @@ llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.03)
 
 # Create_collection_from_docs(docs_splits, embeddings ,COLLECTION_NAME,connection_args )
 
+from pymilvus import Collection,connections
+
+
+connections.connect("default",
+                        uri=MILVUS_URI,
+                        token=MILVUS_TOKEN)
+collection = Collection(name=COLLECTION_NAME) # Get an existing collection
+print(collection)
+
+print("+++++++++++++++++++++++++++++++")
+
+print("collection insert entity start")
+question = "What your name?"
+embedded_vector = embeddings.embed_query(question)
+
+print(embedded_vector)
+print(len(embedded_vector), type(embedded_vector))
+
+collection.insert([["mymind."] ,[question], [embedded_vector]])
+print("collection insert entity end")
+
+
 
 vectorstore = vector_store_milvus(embeddings, connection_args, COLLECTION_NAME )
 
@@ -173,25 +195,24 @@ memory = VectorStoreRetrieverMemory(retriever=retriever, ai_prefix="AI Assistant
 
 # memory=ConversationBufferWindowMemory(k=10,memory_key="history",ai_prefix="AI Assistant")
 
+
+
 conversation_with_summary = ConversationChain(
     llm=llm,
     memory=memory,
     verbose=True,
     prompt=prompt_template,
-    metadata={'source': 'test.txt','text': 'test'}
+    metadata={'source': 'test.txt','text': 'text', 'What your name?': embedded_vector}
 )
-print(memory)
-
-embedded_query = embeddings.embed_query("What was the name mentioned in the conversation?")
-print(embedded_query[0])
-print(embedded_query)
-print(conversation_with_summary)
 
 
 
 
 
-print(conversation_with_summary.invoke("What your name?").output_schema.schema())
+
+
+
+# print(conversation_with_summary.invoke("What your name?").output_schema.schema())
 
 #print(conversation_with_summary.invoke(""))
 
