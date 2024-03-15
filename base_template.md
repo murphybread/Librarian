@@ -67,6 +67,15 @@
 ## 000/090/090.00/090.00.md
  description: Understand the trends, updates, and historical context of the industry background
 
+## 000/030/030.md
+ description: This section covers packages that are created during the build process for developers. This category talk about dependencies, how to manage them, performance improvements, storage, etc.
+
+## 000/030/030.00/030.00.md
+ description: This category will cover pip related items in the following packages
+
+## 000/030/030.00/030.00 a.md
+ description: This article about pip module name convention hypen and underbar
+
 ## 000/080/080.md
  description: No description provided
 
@@ -354,13 +363,4 @@
 
 ## 600/630/630.10/630.10.md
  description: No description provided
-
-## Entrance/030.00.md
- description: This category will cover pip related items in the following packages
-
-## Entrance/030.md
- description: This section covers packages that are created during the build process for developers. This category talk about dependencies, how to manage them, performance improvements, storage, etc.
-
-## Entrance/030.00 a.md
- description: This article about pip module name convention hypen and underbar
 
