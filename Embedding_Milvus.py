@@ -134,11 +134,11 @@ def vector_store_milvus(embeddings , connection_args, collection_name="default_c
 def invoke_from_retriever(query, vector_store, llm, prompt_template, base_template_path=''):
     # Load the initial context
     initial_context_content = load_base_template(base_template_path)
-
+    
+    print(f'initial_context_content : {initial_context_content}')
     # Set up the components of the chain.
     setup_and_retrieval = RunnableParallel(
         history=RunnableLambda(lambda _: initial_context_content),  # Use RunnableLambda for static content
-        # context=vector_store.as_retriever(),
         input=RunnablePassthrough()  # This can just pass the question as is
     )
 
@@ -153,16 +153,16 @@ docs_splits = split_mutiple_documents('./', CHUNK_SIZE)
 
 prompt_template = langchain_template()
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.03) 
+llm = ChatOpenAI(model_name="gpt-4-0125-preview", temperature=0.03) 
 
 
-Create_collection_from_docs(docs_splits, embeddings ,COLLECTION_NAME,connection_args )
+# Create_collection_from_docs(docs_splits, embeddings ,COLLECTION_NAME,connection_args )
 
 from milvus_memory import MilvusMemory
 
 # Create an instance of MilvusMemory
 milvus_instance = MilvusMemory(uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
-milvus_instance.memory_insert("what your name?", embeddings)
+# milvus_instance.memory_insert("what your name?", embeddings)
     
 
 
@@ -175,10 +175,41 @@ retrieverOptions = {"expr": f"pk == {pks[0]}" , 'k' : 5}
         
 # Retrieve existing documents
 retriever = vectorstore.as_retriever(search_kwargs=retrieverOptions)
-memory = VectorStoreRetrieverMemory(retriever=retriever, ai_prefix="AI Assistant", memory_key="history")
 
 
-print(memory)  
+
+answer1 = invoke_from_retriever("what is article number about background for machine learning" , vectorstore, llm, prompt_template)
+answer2 = invoke_from_retriever("what is article number about background for machine learning" , vectorstore, llm, prompt_template, initial_context)
+
+
+print(answer1.content)
+print(answer2.content)
+
+
+
+from langchain_community.chat_models import ChatOpenAI
+from langchain.chains import create_history_aware_retriever
+from langchain import hub
+
+# rephrase_prompt = hub.pull("langchain-ai/chat-langchain-rephrase")
+
+
+chat_retriever_chain = create_history_aware_retriever(
+    llm=llm, retriever=retriever, prompt=prompt_template
+)
+
+result = retriever.get_relevant_documents("what did he say about ketanji brown jackson")[0].page_content
+
+
+
+
+# result = chat_retriever_chain.invoke({"input": "what your name?", "history": "aa"})
+# print(result)
+
+# for r in result:
+#     print(r)
+#memory = VectorStoreRetrieverMemory(retriever=retriever, ai_prefix="AI Assistant", memory_key="history")
+
 
 # --------------
 
@@ -186,12 +217,12 @@ print(memory)
 
 
 
-conversation_with_summary = ConversationChain(
-    llm=llm,
-    memory=memory,
-    verbose=True,
-    prompt=prompt_template,
-)                                                                                                                                                                                                                             
+# conversation_with_summary = ConversationChain(
+#     llm=llm,
+#     memory=memory,
+#     verbose=True,
+#     prompt=prompt_template,
+# )                                                                                                                                                                                                                             
 
  
 # print(conversation_with_summary.predict(input ="제 이름이 무엇이었는지 기억하세요?"))
@@ -227,13 +258,6 @@ conversation_with_summary = ConversationChain(
 
 
 
-
-# answer1 = invoke_from_retriever("what is article number about Industry background?" , vector_store, llm, prompt_template)
-# answer2 = invoke_from_retriever("what is article number about Industry background?" , vector_store, llm, prompt_template, initial_context)
-
-
-# print(answer1)
-# print(answer2)
 
 
 

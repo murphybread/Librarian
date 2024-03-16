@@ -6,12 +6,15 @@ langchain-experimental
 boto3
 langchain_core
 faiss-cpu
+langchainhub
+
 
 #Milvus function openai,langchain,pymilvus,tiktoken,langchain_text_splitters
 openai
 pymilvus
 tiktoken
 langchain_text_splitters
+
 
 # Streamlit_app.py streamlit
 streamlit
