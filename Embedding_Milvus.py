@@ -25,6 +25,11 @@ import streamlit as st
 
 import uuid
 
+
+#custom package
+from milvus_memory import MilvusMemory
+
+
 MILVUS_TOKEN = st.secrets['MILVUS']['MILVUS_TOKEN']
 MILVUS_URI = st.secrets['MILVUS']['MILVUS_URI']
 COLLECTION_NAME = "Library"
@@ -76,7 +81,7 @@ def langchain_template():
 Answer using history as context
 If you don't know the answer, just say that you don't know, don't try to make up an answer. 
 Use three sentences maximum and keep the answer as concise as possible. 
-Always answer with description and file_path about file.
+Answer with description and file_path about file if you can.
 
 history
 {history}
@@ -131,23 +136,45 @@ def vector_store_milvus(embeddings , connection_args, collection_name="default_c
 
 
 
-def invoke_from_retriever(query, vector_store, llm, prompt_template, base_template_path=''):
+
+
+def invoke_from_retriever(query, vector_store, llm, prompt_template, uuid=' '):
     # Load the initial context
-    initial_context_content = load_base_template(base_template_path)
     
-    print(f'initial_context_content : {initial_context_content}')
+    expr = f"source == '{uuid}'"
+    # pks = vectorstore.get_pks(expr)
+    # retrieverOptions = {"expr": f"pk == {pks[0]}" , 'k' : 3}
+    retrieverOptions = {"expr": expr , 'k' : 3}
+    
+            
+    # Retrieve existing documents
+    retriever = vectorstore.as_retriever(search_kwargs=retrieverOptions)
+    
+
+    
+    # if no match files in vectordb, it will return [] about get_relevant_documents(query)
+    retriever_result = retriever.get_relevant_documents(query)
+    if retriever_result:
+        history = retriever.get_relevant_documents(query)[0].page_content
+    else:
+        history = ""
+    
+     
+    print(f'history : {history}')
+    
+    
     # Set up the components of the chain.
     setup_and_retrieval = RunnableParallel(
-        history=RunnableLambda(lambda _: initial_context_content),  # Use RunnableLambda for static content
+        history=RunnableLambda(lambda _: history),  # Use RunnableLambda for static content
         input=RunnablePassthrough()  # This can just pass the question as is
     )
 
     # Construct and invoke the chain
     rag_chain = setup_and_retrieval | prompt_template | llm
-    return rag_chain.invoke(query)  
+    return rag_chain.invoke(query).content
 
 
-initial_context = './base_template.md'
+
 docs_splits = split_mutiple_documents('./', CHUNK_SIZE)
 
 
@@ -158,12 +185,7 @@ llm = ChatOpenAI(model_name="gpt-4-0125-preview", temperature=0.03)
 
 # Create_collection_from_docs(docs_splits, embeddings ,COLLECTION_NAME,connection_args )
 
-from milvus_memory import MilvusMemory
 
-# Create an instance of MilvusMemory
-milvus_instance = MilvusMemory(uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
-# milvus_instance.memory_insert("what your name?", embeddings)
-    
 
 
 
@@ -178,27 +200,20 @@ retriever = vectorstore.as_retriever(search_kwargs=retrieverOptions)
 
 
 
-answer1 = invoke_from_retriever("what is article number about background for machine learning" , vectorstore, llm, prompt_template)
-answer2 = invoke_from_retriever("what is article number about background for machine learning" , vectorstore, llm, prompt_template, initial_context)
 
+answer1 = invoke_from_retriever("what is article number about background for machine learning" , vectorstore, llm, prompt_template, './base_template.md')
 
-print(answer1.content)
-print(answer2.content)
+print(answer1)
 
+# Create an instance of MilvusMemory
+milvus_instance = MilvusMemory(uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
+first_session = milvus_instance.memory_insert(answer1, embeddings)
+    
 
+# context = vectorstore.as_retriever(search_kwargs=retrieverOptions)
+answer2 = invoke_from_retriever("what is the topic we just talked before?" , vectorstore, llm, prompt_template, first_session)
+print(answer2)
 
-from langchain_community.chat_models import ChatOpenAI
-from langchain.chains import create_history_aware_retriever
-from langchain import hub
-
-# rephrase_prompt = hub.pull("langchain-ai/chat-langchain-rephrase")
-
-
-chat_retriever_chain = create_history_aware_retriever(
-    llm=llm, retriever=retriever, prompt=prompt_template
-)
-
-result = retriever.get_relevant_documents("what did he say about ketanji brown jackson")[0].page_content
 
 
 

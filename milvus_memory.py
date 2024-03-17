@@ -13,3 +13,6 @@ class MilvusMemory:
         session = str(uuid.uuid1())
         self.collection.insert([[session], [query], [vector]])
         print("-----------------collection insert entity end------------")
+        
+        return session
+        
