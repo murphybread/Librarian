@@ -52,7 +52,7 @@ with st.sidebar:
     if pwd == st.secrets["STREAMLIT"]["PASSWORD"]:
         st.session_state['admin_button'] = False
     else:
-           st.session_state['admin_button'] = True     
+        st.session_state['admin_button'] = True     
 
     admin_status = st.button("Admin",disabled=st.session_state.admin_button,type="primary")
     
