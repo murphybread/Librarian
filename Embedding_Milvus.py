@@ -30,10 +30,22 @@ import uuid
 from milvus_memory import MilvusMemory
 
 
-MILVUS_TOKEN = st.secrets['MILVUS']['MILVUS_TOKEN']
-MILVUS_URI = st.secrets['MILVUS']['MILVUS_URI']
+
+MILVUS_TOKEN=st.secrets["MILVUS"]["MILVUS_TOKEN"]
+MILVUS_URI=st.secrets["MILVUS"]["MILVUS_URI"]
+
 COLLECTION_NAME = "Library"
 CONNECTION_ARGS = { 'uri': MILVUS_URI, 'token': MILVUS_TOKEN }
+
+
+os.environ['OPENAI_API_KEY'] = st.secrets["OPENAI"]["OPENAI_API_KEY"]
+os.environ['AWS_ACCESS_KEY_ID'] = st.secrets["AWS"]["AWS_ACCESS_KEY_ID"]
+os.environ['AWS_SECRET_ACCESS_KEY'] = st.secrets["AWS"]["AWS_SECRET_ACCESS_KEY"]
+os.environ['AWS_DEFAULT_REGION'] = st.secrets["AWS"]["AWS_DEFAULT_REGION"]
+
+os.environ['MILVUS_TOKEN'] = st.secrets["MILVUS"]["MILVUS_TOKEN"]
+os.environ['MILVUS_URI '] = st.secrets["MILVUS"]["MILVUS_URI"]
+
 
 CHUNK_SIZE= 15000
 
@@ -80,15 +92,11 @@ def langchain_template():
     template = """ 
 You follow these instructions
 0. Keep the answer as concise as possible and If you don't know the answer, just say that you don't know, don't try to make up an answer.
-1. What you need to answer is the question from HUMAN in the Current Conversation. Always leave a file_path and description. If none, write None.
+1. Response to question of HUMAN in the Current Conversation. Always leave a file_path and description with respone to question. If none, write None.
 If you don't have enough information to answer, do step 2
 2. Refer to the history conversation as information to answer.
 If you don't have enough information to answer, do step 3
 3. Refer to Library_base_knowledge. 
-
-
-
-
 
 
 Library_base_knowledge
@@ -178,13 +186,14 @@ def invoke_from_retriever(query, llm, prompt_template, uuid=''):
     # Construct and invoke the chain
     rag_chain = setup_and_retrieval | prompt_template | llm
     
+    
     return history, query, rag_chain.invoke(query).content
 
 docs_splits = split_mutiple_documents('./', CHUNK_SIZE)
 
 
 prompt_template = langchain_template()
-embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small",p[em])
 llm = ChatOpenAI(model_name="gpt-4-0125-preview", temperature=0) 
 
 
@@ -209,23 +218,23 @@ milvus_instance = MilvusMemory(uri=MILVUS_URI, token=MILVUS_TOKEN, collection_na
 
     
 
-query = "what is for reusability especially by Python?"
+query = "what is for reusability especially by Python? "
 history1, query1, answer1 = invoke_from_retriever(query, llm, prompt_template)
-print("1111111111111111111111")
-first_session = milvus_instance.memory_insert("\nHUMAN:" + query1+ "\nAI:" + answer1, embeddings)
+
+first_session = milvus_instance.memory_insert(history1 + "HUMAN:"+query1+"\nAI:" + answer1, embeddings)
 
 
 
 query = "what is the topic just before?"
 history2, query2, answer2 = invoke_from_retriever(query, llm, prompt_template,first_session)
-print("222222222222222222222222222222222")
-second_session = milvus_instance.memory_insert(history2 +"\nHUMAN:" + query+ "\nAI:" + answer2, embeddings)
+
+second_session = milvus_instance.memory_insert(history2 +"HUMAN:" + query+ "\nAI:" + answer2, embeddings)
 
 
 query = "what is the number of gitlab article?"
 history3, query3, answer3 = invoke_from_retriever(query, llm, prompt_template,second_session)
-print("222222222222222222222222222222222")
-third_session = milvus_instance.memory_insert(history3 +"\nHUMAN:" + query+ "\nAI:" + answer3, embeddings)
+
+third_session = milvus_instance.memory_insert(history3 +"HUMAN:" + query+ "\nAI:" + answer3, embeddings)
 
 
 # query = "what is the path about Exploratory Data Analysis (EDA)?"
