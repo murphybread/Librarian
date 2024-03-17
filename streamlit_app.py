@@ -31,8 +31,7 @@ llm_model_openai_gpt4 = rag.get_llm_openai(model_name2)
 llm_model_aws_bedrock = rag.get_llm_aws_bedrock(model_name3)
 
 
-if 'initial' not in st.session.state:
-    
+if 'initial' not in st.session_state:
     st.session.state['initial'] = True
 
 st.write(st.session_state)
