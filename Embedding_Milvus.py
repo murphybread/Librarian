@@ -159,8 +159,6 @@ def vector_store_milvus(embeddings , connection_args=CONNECTION_ARGS, collection
 
 def invoke_from_retriever(query, llm, prompt_template, uuid=''):
     
-    # embeddings= OpenAIEmbeddings(model="text-embedding-3-small")
-    # vectorstore = vector_store_milvus(embeddings)
     
     expr = f"source == '{uuid}'"
     retrieverOptions = {"expr": expr , 'k' : 1}
@@ -193,11 +191,11 @@ docs_splits = split_mutiple_documents('./', CHUNK_SIZE)
 
 
 prompt_template = langchain_template()
-embeddings = OpenAIEmbeddings(model="text-embedding-3-small",p[em])
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 llm = ChatOpenAI(model_name="gpt-4-0125-preview", temperature=0) 
 
 
-Create_collection_from_docs(docs_splits, embeddings)
+# Create_collection_from_docs(docs_splits, embeddings)
 
 
 
@@ -219,22 +217,22 @@ milvus_instance = MilvusMemory(uri=MILVUS_URI, token=MILVUS_TOKEN, collection_na
     
 
 query = "what is for reusability especially by Python? "
-history1, query1, answer1 = invoke_from_retriever(query, llm, prompt_template)
+def Milvus_chain(query , llm, template , session ='',embedding=''):
+    
+    if embedding == '':
+        embedding = OpenAIEmbeddings(model="text-embedding-3-small")
+        
+    history, question, answer = invoke_from_retriever(query, llm, template,session)
+    session = milvus_instance.memory_insert(history + "HUMAN:"+question+"\nAI:" + answer, embedding)
+    
+    return session
+f1 = Milvus_chain(query,llm,prompt_template)
 
-first_session = milvus_instance.memory_insert(history1 + "HUMAN:"+query1+"\nAI:" + answer1, embeddings)
+query = "what is topic jusst before?? "
+f2 = Milvus_chain(query,llm,prompt_template,f1)
 
-
-
-query = "what is the topic just before?"
-history2, query2, answer2 = invoke_from_retriever(query, llm, prompt_template,first_session)
-
-second_session = milvus_instance.memory_insert(history2 +"HUMAN:" + query+ "\nAI:" + answer2, embeddings)
-
-
-query = "what is the number of gitlab article?"
-history3, query3, answer3 = invoke_from_retriever(query, llm, prompt_template,second_session)
-
-third_session = milvus_instance.memory_insert(history3 +"HUMAN:" + query+ "\nAI:" + answer3, embeddings)
+query = "what is article for pip related items?"
+f3 = Milvus_chain(query,llm,prompt_template,f2)
 
 
 # query = "what is the path about Exploratory Data Analysis (EDA)?"

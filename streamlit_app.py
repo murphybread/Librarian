@@ -34,7 +34,7 @@ llm_model_aws_bedrock = rag.get_llm_aws_bedrock(model_name3)
 if 'initial' not in st.session_state:
     st.session_state['initial'] = True
 
-st.write(st.session_state)
+
 # Use sidebar for model selection
 with st.sidebar:
     st.header("Select Model")
