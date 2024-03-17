@@ -1,6 +1,6 @@
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
+from langchain.docstore.document import Document
 
 def update_entity(file_path, vector_store):
     print("-----------upsert start-----------")
@@ -24,6 +24,8 @@ def update_entity(file_path, vector_store):
         
         # Check if documents exist and print information
         if existing_docs:
+            print(f'existing_docs : {existing_docs}')
+            print(f'existing_docs[0] : {existing_docs[0]}')
             existing_doc = existing_docs[0]
             print(f"upsert before: {existing_doc.page_content}")
         else:
@@ -49,5 +51,11 @@ def update_entity(file_path, vector_store):
 
     print("-----------Upsert finished-----------")
 
+
+
+
+docs =  Document(page_content="abcd", metadata ={'source': "abcd"})
+print(docs,type(docs))
+
 # # Call the function
-# update_entity('./010.00 b.md', vectorstore)
+update_entity('./vecotr.txt', vectorstore)
