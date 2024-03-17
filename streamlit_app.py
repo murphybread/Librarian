@@ -3,7 +3,7 @@ import streamlit as st #모든 streamlit 명령은 "st" 별칭을 통해 사용�
 import RAG as rag #로컬 라이브러리 스크립트 참조
 import hmac
 
-import Embedding_Milvus as em
+# import Embedding_Milvus as em
 
 
 
