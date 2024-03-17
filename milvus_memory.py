@@ -11,14 +11,12 @@ class MilvusMemory:
         self.collection = Collection(name=collection_name)
 
     def memory_insert(self, query, embedding,session=""):
-        print("---------------collection insert entity start-------------")
-        print("query")
-        print(f'{query}')
+        
         vector = embedding.embed_query(query)
         if not session:
             session = str(uuid.uuid1())
         self.collection.insert([[session], [query], [vector]])
-        print("-----------------collection insert entity end------------")
+        
         
         return session
     

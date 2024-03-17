@@ -235,76 +235,8 @@ query = "what is article for pip related items?"
 f3 = Milvus_chain(query,llm,prompt_template,f2)
 
 
-# query = "what is the path about Exploratory Data Analysis (EDA)?"
-# history3, query3, answer3 = invoke_from_retriever(query,vectorstore, llm, prompt_template,second_session)
-# print("3333333333333333333333333333333333")
-# third_session = milvus_instance.memory_insert(history3 +"\nHUMAN:" + query+ "\nAI:" + answer3, embeddings)
 
 
-
-
-    
-
-# query = "what was the topic we talekd just before?"
-# history2, query2, answer2 = invoke_from_retriever( query , vectorstore, llm, prompt_template, first_session)
-# print(history2)
-# print(answer2)
-
-
-
-
-# result = chat_retriever_chain.invoke({"input": "what your name?", "history": "aa"})
-# print(result)
-
-# for r in result:
-#     print(r)
-#memory = VectorStoreRetrieverMemory(retriever=retriever, ai_prefix="AI Assistant", memory_key="history")
-
-
-# --------------
-
-# memory=ConversationBufferWindowMemory(k=10,memory_key="history",ai_prefix="AI Assistant")
-
-
-
-# conversation_with_summary = ConversationChain(
-#     llm=llm,
-#     memory=memory,
-#     verbose=True,
-#     prompt=prompt_template,
-# )                                                                                                                                                                                                                             
-
- 
-# print(conversation_with_summary.predict(input ="제 이름이 무엇이었는지 기억하세요?"))
-
-
-
-
-                                                                                                                                                                                        
-
-
-
-# print(conversation_with_summary.invoke("What your name?").output_schema.schema())
-
-#print(conversation_with_summary.invoke(""))
-
-
-
-# output = conversation_with_summary.predict(input="Hi, my name is Perry, what's up?")
-
-# print(output['response'])
-
-# output = conversation_with_summary.invoke("What about we talekd??")
-# print(output['response'])
-
-# output = conversation_with_summary.invoke("What is path about Langchain?")
-# print(output['response'])
-
-# output = conversation_with_summary.invoke("What about we talekd??")
-# print(output['response'])
-
-
-#print (conversation_with_summary.predict(input="Hello, write postfix number of our chat whenerver we talked for example your answer ... 1"))
 
 
 
