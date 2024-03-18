@@ -52,7 +52,7 @@ def get_llm_openai (model="gpt-3.5-turbo-0125"):
 def get_text_response (query,llm_model):
     
     #Step 1: Loading and splitting documents: 
-    loader = TextLoader("./example.txt")
+    loader = TextLoader("./base_template.md")
     documents = loader.load()
     #text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
     text_splitter = SemanticChunker(OpenAIEmbeddings())
