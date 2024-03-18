@@ -8,7 +8,7 @@ import hmac
 # import Embedding_Milvus as em
 
 
-os.environ['LANGCHAIN_TRACING_V2']= True
+os.environ['LANGCHAIN_TRACING_V2']= true
 os.environ['LANGCHAIN_API_KEY']=st.secrets["LANGSMITH"]["LANGSMITH_API"]
 
 os.environ['OPENAI_API_KEY'] = st.secrets["OPENAI"]["OPENAI_API_KEY"]
