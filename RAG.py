@@ -87,9 +87,9 @@ def get_text_response (query,llm_model):
 def get_response_attribute (query,llm_model):
     
     #Step 1: Loading and splitting documents: 
-    loader = TextLoader("./example.txt")
+    loader = TextLoader("./base_template.md")
     documents = loader.load()
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    text_splitter = CharacterTextSplitter(chunk_size=15000, chunk_overlap=0)
     docs = text_splitter.split_documents(documents)
     
     #Step 2: Embedding generation and FAISS database creation:
