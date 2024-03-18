@@ -3,10 +3,13 @@ import streamlit as st #모든 streamlit 명령은 "st" 별칭을 통해 사용�
 import RAG as rag #로컬 라이브러리 스크립트 참조
 import hmac
 
+
+
 # import Embedding_Milvus as em
 
 
-
+os.environ['LANGCHAIN_TRACING_V2']= True
+os.environ['LANGCHAIN_API_KEY']=st.secrets["LANGSMITH"]["LANGSMITH_API"]
 
 os.environ['OPENAI_API_KEY'] = st.secrets["OPENAI"]["OPENAI_API_KEY"]
 os.environ['AWS_ACCESS_KEY_ID'] = st.secrets["AWS"]["AWS_ACCESS_KEY_ID"]
