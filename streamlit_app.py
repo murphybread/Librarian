@@ -9,7 +9,8 @@ import hmac
 
 
 os.environ['LANGCHAIN_TRACING_V2']= 'True'
-os.environ['LANGCHAIN_API_KEY']=st.secrets["LANGSMITH"]["LANGSMITH_API"]
+os.environ['LANGCHAIN_API_KEY']= st.secrets["LANGSMITH"]["LANGSMITH_API"]
+os.environ['LANGCHAIN_ENDPOINT']= st.secrets["LANGSMITH"]['LANGCHAIN_ENDPOINT']
 
 os.environ['OPENAI_API_KEY'] = st.secrets["OPENAI"]["OPENAI_API_KEY"]
 os.environ['AWS_ACCESS_KEY_ID'] = st.secrets["AWS"]["AWS_ACCESS_KEY_ID"]
