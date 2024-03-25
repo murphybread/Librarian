@@ -5,7 +5,7 @@ import hmac
 
 
 
-# import Embedding_Milvus as em
+# import Lanchaing_Milvus as LM
 
 
 os.environ['LANGCHAIN_TRACING_V2']= 'True'
@@ -18,7 +18,7 @@ os.environ['AWS_SECRET_ACCESS_KEY'] = st.secrets["AWS"]["AWS_SECRET_ACCESS_KEY"]
 os.environ['AWS_DEFAULT_REGION'] = st.secrets["AWS"]["AWS_DEFAULT_REGION"]
 
 os.environ['MILVUS_TOKEN'] = st.secrets["MILVUS"]["MILVUS_TOKEN"]
-os.environ['MILVUS_URI '] = st.secrets["MILVUS"]["MILVUS_URI"]
+os.environ['MILVUS_URI'] = st.secrets["MILVUS"]["MILVUS_URI"]
 
 st.set_page_config(page_title="Murphy's Library")
 st.title("Murphy's Library") #페이지 제목

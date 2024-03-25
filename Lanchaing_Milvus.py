@@ -3,8 +3,7 @@ from langchain_community.vectorstores import Milvus
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
-
-from langchain_text_splitters import CharacterTextSplitter
+from langchain_text_splitters import CharacterTextSplitter, RecursiveCharacterTextSplitter
 
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
@@ -23,28 +22,14 @@ from langchain.chains import ConversationChain
 
 import streamlit as st
 
-import uuid
-
-
-#custom package
-from milvus_memory import MilvusMemory
 
 
 
-MILVUS_TOKEN=st.secrets["MILVUS"]["MILVUS_TOKEN"]
-MILVUS_URI=st.secrets["MILVUS"]["MILVUS_URI"]
+MILVUS_TOKEN=os.environ["MILVUS_TOKEN"]
+MILVUS_URI=os.environ["MILVUS_URI"]
 
 COLLECTION_NAME = "Library"
 CONNECTION_ARGS = { 'uri': MILVUS_URI, 'token': MILVUS_TOKEN }
-
-
-os.environ['OPENAI_API_KEY'] = st.secrets["OPENAI"]["OPENAI_API_KEY"]
-os.environ['AWS_ACCESS_KEY_ID'] = st.secrets["AWS"]["AWS_ACCESS_KEY_ID"]
-os.environ['AWS_SECRET_ACCESS_KEY'] = st.secrets["AWS"]["AWS_SECRET_ACCESS_KEY"]
-os.environ['AWS_DEFAULT_REGION'] = st.secrets["AWS"]["AWS_DEFAULT_REGION"]
-
-os.environ['MILVUS_TOKEN'] = st.secrets["MILVUS"]["MILVUS_TOKEN"]
-os.environ['MILVUS_URI '] = st.secrets["MILVUS"]["MILVUS_URI"]
 
 
 CHUNK_SIZE= 15000
@@ -90,6 +75,7 @@ def load_base_template(file_path):
 
 def langchain_template():
     template = """ 
+You are as a librarian, introducte to the knowledge in Murphy's library.
 You follow these instructions
 0. Keep the answer as concise as possible and If you don't know the answer, just say that you don't know, don't try to make up an answer.
 1. Response to question of HUMAN in the Current Conversation. Always leave a file_path and description with respone to question. If none, write None.
@@ -188,8 +174,6 @@ def invoke_from_retriever(query, llm, prompt_template, uuid=''):
     return history, query, rag_chain.invoke(query).content
 
 docs_splits = split_mutiple_documents('./', CHUNK_SIZE)
-
-
 prompt_template = langchain_template()
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 llm = ChatOpenAI(model_name="gpt-4-0125-preview", temperature=0) 
@@ -216,7 +200,7 @@ milvus_instance = MilvusMemory(uri=MILVUS_URI, token=MILVUS_TOKEN, collection_na
 
     
 
-query = "what is for reusability especially by Python? "
+
 def Milvus_chain(query , llm, template , session ='',embedding=''):
     
     if embedding == '':
@@ -226,18 +210,81 @@ def Milvus_chain(query , llm, template , session ='',embedding=''):
     session = milvus_instance.memory_insert(history + "HUMAN:"+question+"\nAI:" + answer, embedding)
     
     return session
-f1 = Milvus_chain(query,llm,prompt_template)
+# f1 = Milvus_chain(query,llm,prompt_template)
 
-query = "what is topic jusst before?? "
-f2 = Milvus_chain(query,llm,prompt_template,f1)
+# query = "what is topic jusst before?? "
+# f2 = Milvus_chain(query,llm,prompt_template,f1)
 
-query = "what is article for pip related items?"
-f3 = Milvus_chain(query,llm,prompt_template,f2)
-
-
+# query = "what is article for pip related items?"
+# f3 = Milvus_chain(query,llm,prompt_template,f2)
 
 
 
+
+from pymilvus import Collection,connections
+import uuid
+
+
+class MilvusMemory:
+    def __init__(self, uri, token, collection_name):
+        connections.connect("default", uri=uri, token=token)
+        self.collection = Collection(name=collection_name)
+
+    def memory_insert(self, query, embedding,session=""):
+        
+        vector = embedding.embed_query(query)
+        if not session:
+            session = str(uuid.uuid1())
+        self.collection.insert([[session], [query], [vector]])
+        
+        
+        return session
+    
+    def update_entity(self, file_path, vector_store):
+        print("-----------upsert start-----------")
+        expr = f"source == '{file_path}'"
+        pks = vector_store.get_pks(expr)
+
+        # Load new documents to be inserted
+        loader = TextLoader(file_path, encoding='utf-8')
+        documents = loader.load()
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+        docs = text_splitter.split_documents(documents)
+
+        if pks:
+            # Prepare retrieval options
+            retrieverOptions = {"expr": f"pk == {pks[0]}"}
+            # Retrieve existing documents
+            retriever = vector_store.as_retriever(search_kwargs=retrieverOptions)
+            existing_docs = retriever.get_relevant_documents(expr)
+            print(existing_docs)
+
+            # Check if documents exist and print information
+            if existing_docs:
+                print(f'existing_docs : {existing_docs}')
+                existing_doc = existing_docs[0]
+                print(f"upsert before: {existing_doc.page_content}")
+            else:
+                print("No existing text content found.")
+
+            # Delete the outdated entity
+            vector_store.delete(pks)
+
+            print(f'docs : {docs}, docs_type: {type(docs)}')
+            # Add the new documents to the vector store after deletion
+            vector_store.add_documents(docs)
+
+            # Fetch the primary keys for new documents based on the same expression
+            new_pks = vector_store.get_pks(expr)
+
+            # Print the information about deletion and creation
+            print(f"Entity with pk={pks} deleted and new entity created with pk={new_pks}.")
+        else:
+            print(f"No entity found for {file_path}. Creating entity...")
+            vector_store.add_documents(docs)
+            print("New entity created.")
+
+        print("-----------Upsert finished-----------")
 
 
 

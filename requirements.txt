@@ -15,7 +15,9 @@ openai
 pymilvus
 tiktoken
 langchain_text_splitters
+pymilvus
 
 
 # Streamlit_app.py streamlit
 streamlit
+
