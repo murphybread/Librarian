@@ -1,24 +1,54 @@
 import os
 import streamlit as st #모든 streamlit 명령은 "st" 별칭을 통해 사용할 수 있습니다.
 import RAG as rag #로컬 라이브러리 스크립트 참조
-import hmac
 
 
 
-# import Lanchaing_Milvus as LM
 
+import Langchain_Milvus as LM
 
+############### Special variables for Stramlit
+
+# Langchain streamlit env
 os.environ['LANGCHAIN_TRACING_V2']= 'True'
-os.environ['LANGCHAIN_API_KEY']= st.secrets["LANGSMITH"]["LANGSMITH_API"]
-os.environ['LANGCHAIN_ENDPOINT']= st.secrets["LANGSMITH"]['LANGCHAIN_ENDPOINT']
+os.environ['LANGCHAIN_API_KEY']= st.secrets["LANGSMITH_API"]
+os.environ['LANGCHAIN_ENDPOINT']= st.secrets['LANGCHAIN_ENDPOINT']
 
-os.environ['OPENAI_API_KEY'] = st.secrets["OPENAI"]["OPENAI_API_KEY"]
-os.environ['AWS_ACCESS_KEY_ID'] = st.secrets["AWS"]["AWS_ACCESS_KEY_ID"]
-os.environ['AWS_SECRET_ACCESS_KEY'] = st.secrets["AWS"]["AWS_SECRET_ACCESS_KEY"]
-os.environ['AWS_DEFAULT_REGION'] = st.secrets["AWS"]["AWS_DEFAULT_REGION"]
+# LLM API streamlit env
+os.environ['OPENAI_API_KEY'] = st.secrets["OPENAI_API_KEY"]
+os.environ['AWS_ACCESS_KEY_ID'] = st.secrets["AWS_ACCESS_KEY_ID"]
+os.environ['AWS_SECRET_ACCESS_KEY'] = st.secrets["AWS_SECRET_ACCESS_KEY"]
+os.environ['AWS_DEFAULT_REGION'] = st.secrets["AWS_DEFAULT_REGION"]
 
-os.environ['MILVUS_TOKEN'] = st.secrets["MILVUS"]["MILVUS_TOKEN"]
-os.environ['MILVUS_URI'] = st.secrets["MILVUS"]["MILVUS_URI"]
+# RAG stramlit env
+os.environ['CHUNK_SIZE'] = st.secrets["CHUNK_SIZE"]
+os.environ['MODEL_NAME'] = st.secrets["MODEL_NAME"]
+os.environ['EMBEDDING_MODEL_NAME'] = st.secrets["EMBEDDING_MODEL_NAME"]
+os.environ['BASE_FILE_PATH'] = st.secrets["BASE_FILE_PATH"]
+
+# Milvus stramlit env
+os.environ['MILVUS_TOKEN'] = st.secrets["MILVUS_TOKEN"]
+os.environ['MILVUS_URI'] = st.secrets["MILVUS_URI"]
+os.environ['COLLECTION_NAME'] = st.secrets["COLLECTION_NAME"]
+
+############### From env variables for using function
+
+
+# RAG env
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE"))
+MODEL_NAME = os.getenv("MODEL_NAME")
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME")
+BASE_FILE_PATH= os.getenv("BASE_FILE_PATH")
+
+# Milvus env
+MILVUS_TOKEN = os.getenv("MILVUS_TOKEN")
+MILVUS_URI = os.getenv("MILVUS_URI")
+COLLECTION_NAME = os.getenv("COLLECTION_NAME")
+CONNECTION_ARGS = {'uri': MILVUS_URI, 'token': MILVUS_TOKEN}
+
+
+
+
 
 st.set_page_config(page_title="Murphy's Library")
 st.title("Murphy's Library") #페이지 제목
@@ -52,7 +82,7 @@ with st.sidebar:
     # Enable and disable by password for Admin status
     pwd = st.text_input('input your password', type='password')
     
-    if pwd == st.secrets["STREAMLIT"]["PASSWORD"]:
+    if pwd == st.secrets["PASSWORD"]:
         st.session_state['admin_button'] = False
     else:
         st.session_state['admin_button'] = True     
