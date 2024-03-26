@@ -16,6 +16,7 @@ pymilvus
 tiktoken
 langchain_text_splitters
 pymilvus
+uuid
 
 
 # Streamlit_app.py streamlit

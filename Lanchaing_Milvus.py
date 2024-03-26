@@ -20,19 +20,23 @@ from langchain.memory import ConversationBufferMemory, ConversationBufferWindowM
 from langchain.chains import ConversationChain
 
 
-import streamlit as st
 
 
 
+from langchain import hub
 
-MILVUS_TOKEN=os.environ["MILVUS_TOKEN"]
-MILVUS_URI=os.environ["MILVUS_URI"]
+from dotenv import load_dotenv
+# Langchain
 
-COLLECTION_NAME = "Library"
+#Milvus
+load_dotenv()
+CHUNK_SIZE= int(os.getenv("CHUNK_SIZE"))
+MILVUS_TOKEN=os.getenv("MILVUS_TOKEN")
+MILVUS_URI=os.getenv("MILVUS_URI")
 CONNECTION_ARGS = { 'uri': MILVUS_URI, 'token': MILVUS_TOKEN }
 
 
-CHUNK_SIZE= 15000
+COLLECTION_NAME = "Library"
 
 
 DEFAULT_MILVUS_CONNECTION = {
@@ -45,9 +49,8 @@ DEFAULT_MILVUS_CONNECTION = {
     'token': "token"
 }
 
-def Create_collection_from_docs(splits, embeddings,collection_name=COLLECTION_NAME, connection_args= CONNECTION_ARGS):
-    
-    print("----------Embedding started to Milvus----------")
+def create_collection(splits, embeddings,collection_name=COLLECTION_NAME, connection_args= CONNECTION_ARGS):
+    print(f"----------Embedding started from {splits} to Milvus----------")
     vector_store = Milvus(
     embedding_function=embeddings,
     connection_args=connection_args,
@@ -61,9 +64,80 @@ def Create_collection_from_docs(splits, embeddings,collection_name=COLLECTION_NA
     collection_name=collection_name,
     connection_args=connection_args,
     )
-
-    print("----------Embedding finished to Milvus----------")
+    print(f"----------Embedding finished from {splits} to Milvus----------")
+    return None
     
+
+
+
+
+from pymilvus import Collection,connections
+import uuid
+
+
+class MilvusMemory:
+    def __init__(self, uri, token, collection_name):
+        connections.connect("default", uri=uri, token=token)
+        self.collection = Collection(name=collection_name)
+
+    def memory_insert(self, query, embedding,session=""):
+        
+        vector = embedding.embed_query(query)
+        if not session:
+            session = str(uuid.uuid1())
+        self.collection.insert([[session], [query], [vector]])
+        
+        
+        return session
+    
+    def update_entity(self, file_path, vector_store):
+        print("-----------upsert start-----------")
+        expr = f"source == '{file_path}'"
+        pks = vector_store.get_pks(expr)
+
+        # Load new documents to be inserted
+        loader = TextLoader(file_path, encoding='utf-8')
+        documents = loader.load()
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+        docs = text_splitter.split_documents(documents)
+
+        if pks:
+            # Prepare retrieval options
+            retrieverOptions = {"expr": f"pk == {pks[0]}"}
+            # Retrieve existing documents
+            retriever = vector_store.as_retriever(search_kwargs=retrieverOptions)
+            existing_docs = retriever.get_relevant_documents(expr)
+            print(existing_docs)
+
+            # Check if documents exist and print information
+            if existing_docs:
+                print(f'existing_docs : {existing_docs}')
+                existing_doc = existing_docs[0]
+                print(f"upsert before: {existing_doc.page_content}")
+            else:
+                print("No existing text content found.")
+
+            # Delete the outdated entity
+            vector_store.delete(pks)
+
+            print(f'docs : {docs}, docs_type: {type(docs)}')
+            # Add the new documents to the vector store after deletion
+            vector_store.add_documents(docs)
+
+            # Fetch the primary keys for new documents based on the same expression
+            new_pks = vector_store.get_pks(expr)
+
+            # Print the information about deletion and creation
+            print(f"Entity with pk={pks} deleted and new entity created with pk={new_pks}.")
+        else:
+            print(f"No entity found for {file_path}. Creating entity...")
+            vector_store.add_documents(docs)
+            print("New entity created.")
+
+        print("-----------Upsert finished-----------")
+
+
+
 def load_base_template(file_path):
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -94,14 +168,21 @@ history_conversation
 Current conversation:
 Human: {input}
 """
+
+    obj = hub.pull("murphy/librarian_guide")
+    # print(type(obj))
+    # print(obj)
+
     rag_prompt = ChatPromptTemplate.from_template(template)
+    # print(type(rag_prompt))
+    # print(rag_prompt)
     
-    return rag_prompt
+    return obj
     
+langchain_template()
 
 
-
-def split_mutiple_documents(current_path,chunk_size):
+def split_mutiple_documents(current_path,chunk_size: int):
     documents = []
 
     for file in os.listdir():
@@ -122,7 +203,7 @@ def split_mutiple_documents(current_path,chunk_size):
             loader = TextLoader(text_path)
             documents.extend(loader.load())
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=0)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size)
     all_splits = text_splitter.split_documents(documents)
     return all_splits
 
@@ -221,70 +302,6 @@ def Milvus_chain(query , llm, template , session ='',embedding=''):
 
 
 
-from pymilvus import Collection,connections
-import uuid
-
-
-class MilvusMemory:
-    def __init__(self, uri, token, collection_name):
-        connections.connect("default", uri=uri, token=token)
-        self.collection = Collection(name=collection_name)
-
-    def memory_insert(self, query, embedding,session=""):
-        
-        vector = embedding.embed_query(query)
-        if not session:
-            session = str(uuid.uuid1())
-        self.collection.insert([[session], [query], [vector]])
-        
-        
-        return session
-    
-    def update_entity(self, file_path, vector_store):
-        print("-----------upsert start-----------")
-        expr = f"source == '{file_path}'"
-        pks = vector_store.get_pks(expr)
-
-        # Load new documents to be inserted
-        loader = TextLoader(file_path, encoding='utf-8')
-        documents = loader.load()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-        docs = text_splitter.split_documents(documents)
-
-        if pks:
-            # Prepare retrieval options
-            retrieverOptions = {"expr": f"pk == {pks[0]}"}
-            # Retrieve existing documents
-            retriever = vector_store.as_retriever(search_kwargs=retrieverOptions)
-            existing_docs = retriever.get_relevant_documents(expr)
-            print(existing_docs)
-
-            # Check if documents exist and print information
-            if existing_docs:
-                print(f'existing_docs : {existing_docs}')
-                existing_doc = existing_docs[0]
-                print(f"upsert before: {existing_doc.page_content}")
-            else:
-                print("No existing text content found.")
-
-            # Delete the outdated entity
-            vector_store.delete(pks)
-
-            print(f'docs : {docs}, docs_type: {type(docs)}')
-            # Add the new documents to the vector store after deletion
-            vector_store.add_documents(docs)
-
-            # Fetch the primary keys for new documents based on the same expression
-            new_pks = vector_store.get_pks(expr)
-
-            # Print the information about deletion and creation
-            print(f"Entity with pk={pks} deleted and new entity created with pk={new_pks}.")
-        else:
-            print(f"No entity found for {file_path}. Creating entity...")
-            vector_store.add_documents(docs)
-            print("New entity created.")
-
-        print("-----------Upsert finished-----------")
 
 
 
