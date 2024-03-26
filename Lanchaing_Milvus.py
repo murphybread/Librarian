@@ -138,6 +138,7 @@ class MilvusMemory:
 
 
 
+# From get strings file
 def load_base_template(file_path):
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -145,6 +146,15 @@ def load_base_template(file_path):
         return base_template
     except FileNotFoundError:
         return ""  # Return an empty string if file not found
+
+from pathlib import Path
+
+def load_base_template(file_path):
+    path = Path(file_path)
+    try:
+        return path.read_text(encoding='utf-8')
+    except FileNotFoundError:
+        return ""
 
 
 def langchain_template():
@@ -291,10 +301,10 @@ def Milvus_chain(query , llm, template , session ='',embedding=''):
     session = milvus_instance.memory_insert(history + "HUMAN:"+question+"\nAI:" + answer, embedding)
     
     return session
-# f1 = Milvus_chain(query,llm,prompt_template)
+f1 = Milvus_chain("hello what your name?",llm,prompt_template)
 
-# query = "what is topic jusst before?? "
-# f2 = Milvus_chain(query,llm,prompt_template,f1)
+
+f2 = Milvus_chain("what was firstg question?",llm,prompt_template,f1)
 
 # query = "what is article for pip related items?"
 # f3 = Milvus_chain(query,llm,prompt_template,f2)
