@@ -1,11 +1,18 @@
 import os
-import streamlit as st #모든 streamlit 명령은 "st" 별칭을 통해 사용할 수 있습니다.
-import RAG as rag #로컬 라이브러리 스크립트 참조
+import streamlit as st # Easy wen app framework
+
+# Langchain for Dev
+
+## LLM 
+from langchain_openai import ChatOpenAI
+from langchain_community.llms import Bedrock
+
+# Langchain for Ops
+from langchain import hub # Prompt managing from the langchainhub site
 
 
-
-
-import Langchain_Milvus as LM
+### Module
+import RAG_Milvus as rm
 
 ############### Special variables for Stramlit
 
@@ -53,16 +60,13 @@ CONNECTION_ARGS = {'uri': MILVUS_URI, 'token': MILVUS_TOKEN}
 st.set_page_config(page_title="Murphy's Library")
 st.title("Murphy's Library") #페이지 제목
 
-
 model_name1 = 'gpt-3.5-turbo-0125'
 model_name2 = 'gpt-4-0125-preview'
 model_name3 = 'amazon.titan-text-express-v1'
 
-
-
-llm_model_openai_gpt3_5 = rag.get_llm_openai(model_name1)
-llm_model_openai_gpt4 = rag.get_llm_openai(model_name2)
-llm_model_aws_bedrock = rag.get_llm_aws_bedrock(model_name3)
+llm_model_openai_gpt3_5 = ChatOpenAI(model_name=model_name1, temperature=0) 
+llm_model_openai_gpt4 = ChatOpenAI(model_name=model_name2, temperature=0) 
+llm_model_aws_bedrock = Bedrock(model_id = 'amazon.titan-text-express-v1', region_name="us-east-1")
 
 
 if 'initial' not in st.session_state:
@@ -80,7 +84,7 @@ with st.sidebar:
     aws_bedrock_choice = st.radio ("AWS Bedrock models", ["none"])
     
     # Enable and disable by password for Admin status
-    pwd = st.text_input('input your password', type='password')
+    pwd = st.text_input('Please enter your password to enable Admin tab', type='password')
     
     if pwd == st.secrets["PASSWORD"]:
         st.session_state['admin_button'] = False
@@ -101,6 +105,8 @@ tab1, tab2, tab3 = st.tabs(["OpenAI", "AWS Bedrock", "Admin"])
 # Define checkboxes for user choices
 query = st.text_input("**Give me a question!**" ,placeholder="Enter your question")
 go_button = st.button("Go", type="primary")
+prompt_template = hub.pull("murphy/librarian_guide")
+
 
 if go_button:
     with st.spinner("Working..."):
@@ -111,14 +117,15 @@ if go_button:
                 if openai_choice == "none":
                     st.error("OpenAI models are not selected")
                 else:
-                    
                     if openai_choice == model_name1:
-                        llm_model = llm_model_openai_gpt3_5
+                        llm = llm_model_openai_gpt3_5 
                     elif openai_choice == model_name2:
-                        llm_model = llm_model_openai_gpt4
-                        
-                    response_content = rag.get_text_response(query, llm_model)
-                    st.write(response_content)
+                        llm = llm_model_openai_gpt4
+                    
+                    history, query, answer, session = rm.Milvus_chain("What is number about EDA?",llm,prompt_template)
+
+                    
+                    st.write(answer)
                     
                 with st.expander(label="Chat History", expanded=False):
                     st.write(st.session_state.initial)
@@ -130,9 +137,10 @@ if go_button:
                     st.error("AWS Bedrock models are not Supported yet")
                 
                 else:
-                    llm_model = llm_model_aws_bedrock
-                    response_content = rag.get_text_response(query, llm_model)
-                    st.write(response_content)
+                    llm = llm_model_aws_bedrock
+                    history, query, answer, session = rm.Milvus_chain("What is number about EDA?",llm,prompt_template)
+
+                    st.write(answer)
                     
                 with st.expander(label="Chat History", expanded=False):
                     st.write(st.session_state.initial)
