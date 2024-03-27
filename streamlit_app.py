@@ -77,7 +77,7 @@ with st.sidebar:
     openai_choice = st.radio ("OpenAI models", ("none",model_name1,model_name2))
     
     st.subheader("AWS Bedrock")
-    aws_bedrock_choice = st.radio ("AWS Bedrock models", ["none", model_name3])
+    aws_bedrock_choice = st.radio ("AWS Bedrock models", ["none"])
     
     # Enable and disable by password for Admin status
     pwd = st.text_input('input your password', type='password')
@@ -127,7 +127,7 @@ if go_button:
             with tab2:
                 st.header("AWS Bedrock")
                 if aws_bedrock_choice == "none":
-                    st.error("AWS Bedrock models are not selected")
+                    st.error("AWS Bedrock models are not Supported yet")
                 
                 else:
                     llm_model = llm_model_aws_bedrock
@@ -136,7 +136,7 @@ if go_button:
                     
                 with st.expander(label="Chat History", expanded=False):
                     st.write(st.session_state.initial)
-if admin_status:#pwd == st.secrets['STREAMLIT']['password']:
+if admin_status:
     with tab3:
         st.header("Admin")
         st.write("Admin active")
