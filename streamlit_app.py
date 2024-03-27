@@ -95,18 +95,20 @@ with st.sidebar:
     else:
         st.session_state['admin_button'] = False     
 
-    
-    
-    
 
-
-st.write(st.session_state['admin_button'])
 
 # Main area: tabs for query input and results
 tab1, tab2, tab3 = st.tabs(["OpenAI", "AWS Bedrock", "Admin"])
 
+
+st.header("Library address")
+url = "https://www.murphybooks.me"
+st.write(f"[Murphy's Library]({url})")
+
+
 # Define checkboxes for user choices
 question = st.text_input("**Give me a question!**" ,placeholder="Enter your question")
+memory_session = st.text_input("**If you have information about the last session, you can continue the previous conversation.**" ,placeholder="Enter your Session string")
 go_button = st.button("Go", type="primary")
 
 
@@ -122,13 +124,21 @@ if go_button:
             with tab1:
                 st.header("OpenAI")
                 llm = llm_model_openai_gpt3_5 if openai_choice == model_name1 else llm_model_openai_gpt4
-                history, query, answer, session = rm.Milvus_chain(question, llm, prompt_template)
+                
+                                
+                st.write(memory_session)
+                print(memory_session)
+                history, query, answer, session = rm.Milvus_chain(question, llm, prompt_template,memory_session)
                 st.write(query)
                 st.write(answer)
-                st.write(query)
-
+                st.write(session)
+                
+                
+                
+                
                 with st.expander(label="Chat History", expanded=False):
-                    st.write(st.session_state.initial)
+                    
+                    st.write(history)
         elif openai_choice:
             with tab1:
                 st.error("OpenAI models are not selected")
