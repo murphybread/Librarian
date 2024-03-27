@@ -95,13 +95,12 @@ with st.sidebar:
     else:
         st.session_state['admin_button'] = False     
 
-    admin_status = st.button("Admin",disabled=not st.session_state.admin_button,type="primary")
     
     
+    
 
 
-st.write(admin_status)
-
+st.write(st.session_state['admin_button'])
 
 # Main area: tabs for query input and results
 tab1, tab2, tab3 = st.tabs(["OpenAI", "AWS Bedrock", "Admin"])
@@ -109,6 +108,8 @@ tab1, tab2, tab3 = st.tabs(["OpenAI", "AWS Bedrock", "Admin"])
 # Define checkboxes for user choices
 question = st.text_input("**Give me a question!**" ,placeholder="Enter your question")
 go_button = st.button("Go", type="primary")
+
+
 prompt_template = hub.pull("murphy/librarian_guide")
 
 
@@ -146,20 +147,35 @@ if go_button:
                 st.error("AWS Bedrock models are not supported yet")
 
         
+col1, col2, col3 = st.columns(3)
 
-if admin_status:
+if st.session_state['admin_button']:
+    
     with tab3:
-        st.header("Admin")
-        st.write("Admin active")
-
-        create_button = st.button('Create VectorDB')
-
-        if create_button:
-            with st.spinner("Embedding Started"):
-                rm.create_collection()
-            st.success('Embedding Done')
-            if admin_button:
-                st.session_state['admin_status'] = not st.session_state['admin_status']
+        st.header("Admin activated")
+        
+        with col1:
+            st.header("Create VectorDB")
+    
+            create_button = st.button('Create VectorDB', type="primary")
+            
+            if create_button:
+                with st.spinner("Embedding Started"):
+                    rm.create_collection()
+                st.success('Embedding Done')
+        with col2:
+            st.header("Update single entity")
+            
+            file_path = st.text_input( " **Write pifePath**" , placeholder="Enter your question")
+            upsert_button = st.button('Upsert Entity of DB', type="primary")
+            if upsert_button:
+                with st.spinner("Upsert Started"):
+                    st.write(file_path)
+                    entitiy_memory = rm.MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
+                    entitiy_memory.update_entity(file_path, entitiy_memory.vectorstore)
+                st.success('Upsert Done')
+            
+            
 
 
     
