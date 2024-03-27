@@ -49,7 +49,7 @@ COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 
 # Class 
 class MilvusMemory:
-    def __init__(self, uri, token, collection_name,connection_args=CONNECTION_ARGS):
+    def __init__(self, embeddings,uri, token, collection_name,connection_args=CONNECTION_ARGS):
         connections.connect("default", uri=uri, token=token)
         self.collection = Collection(name=collection_name)
         self.vectorstore = Milvus(
@@ -117,23 +117,6 @@ class MilvusMemory:
 
 
 
-def create_collection(splits, embeddings,collection_name=COLLECTION_NAME, connection_args= CONNECTION_ARGS):
-    print(f"----------Embedding Starting from ALL files to Milvus----------")
-    vector_store = Milvus(
-    embedding_function=embeddings,
-    connection_args=connection_args,
-    collection_name=collection_name,
-    drop_old=True,
-    auto_id=True,
-    
-    ).from_documents(
-    splits,
-    embedding=embeddings,
-    collection_name=collection_name,
-    connection_args=connection_args,
-    )
-    print(f"----------Embedding has Finished ALL files intto Milvus----------")
-    return None
     
 
 
@@ -168,6 +151,33 @@ def split_mutiple_documents(current_path,chunk_size: int):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size)
     all_splits = text_splitter.split_documents(documents)
     return all_splits
+
+
+
+def create_collection(collection_name=COLLECTION_NAME, connection_args= CONNECTION_ARGS, embeddings= '',splits =''):
+
+    if splits == '':
+        splits = split_mutiple_documents('./', CHUNK_SIZE)
+
+    if embeddings == '':
+        embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
+    
+    print(f"----------Embedding Starting from ALL files to Milvus----------")
+    vector_store = Milvus(
+    embedding_function=embeddings,
+    connection_args=connection_args,
+    collection_name=collection_name,
+    drop_old=True,
+    auto_id=True,
+    
+    ).from_documents(
+    splits,
+    embedding=embeddings,
+    collection_name=collection_name,
+    connection_args=connection_args,
+    )
+    print(f"----------Embedding has Finished ALL files intto Milvus----------")
+    return None
 
 
 def vectorstore_milvus(embeddings , connection_args=CONNECTION_ARGS, collection_name=COLLECTION_NAME ):
@@ -208,14 +218,15 @@ def invoke_from_retriever(query, llm, prompt_template, vectorstore , uuid=''):
     return history, query, answer
 
 
-def Milvus_chain(query, llm, prompt_template, session='', embedding=''):
-    if embedding == '':
-        embedding = OpenAIEmbeddings(model="text-embedding-3-small")
+def Milvus_chain(query, llm, prompt_template, session='', embeddings=''):
+    if embeddings == '':
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     
     
-    milvus_memory = MilvusMemory(uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
+    milvus_memory = MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
+    # print(milvus_memory, milvus_memory.vectorstore)
     history, question, answer = invoke_from_retriever(query, llm, prompt_template, milvus_memory.vectorstore, session)    
-    session = milvus_memory.memory_insert(history + "HUMAN:" + question + "\nAI:" + answer, embedding)
+    session = milvus_memory.memory_insert(history + "HUMAN:" + question + "\nAI:" + answer, embeddings)
     
     
     
@@ -231,21 +242,12 @@ llm = ChatOpenAI(model_name=MODEL_NAME, temperature=0)
 vectorstore = vectorstore_milvus(embeddings)
 
 
-# create_collection(docs_splits,embeddings)
 
 
 
 
 
 # history1, question1, answer1,session1 = Milvus_chain("What is number about EDA?",llm,prompt_template)
-# f2 = Milvus_chain("What is description about EDA?",llm,prompt_template,f1)
-
-
-
-
-
-
- 
-
-
+# print(history1, question1, answer1,session1)
+# # f1 = Milvus_chain("What is description about EDA?",llm,prompt_template)
 
