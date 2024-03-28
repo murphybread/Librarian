@@ -226,11 +226,10 @@ def Milvus_chain(query, llm, prompt_template, session='', embeddings=''):
     milvus_memory = MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
     # print(milvus_memory, milvus_memory.vectorstore)
     history, question, answer = invoke_from_retriever(query, llm, prompt_template, milvus_memory.vectorstore, session)    
-    session = milvus_memory.memory_insert(history + "HUMAN:" + question + "\nAI:" + answer, embeddings)
+    session = milvus_memory.memory_insert(history + "\nHUMAN:" + question + "\nAI:" + answer, embeddings)
+
     
-    
-    
-    return history, question, answer,session
+    return history, question, answer, session
 
 # Implement
 

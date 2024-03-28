@@ -15,6 +15,13 @@ from langchain import hub # Prompt managing from the langchainhub site
 ### Module
 import RAG_Milvus as rm
 
+
+############## Streamlit Dynamic function
+def submit():
+    st.session_state.manual_session_value = st.session_state.widget
+    st.session_state.widget = ''
+
+
 ############### Special variables for Stramlit
 
 # Langchain streamlit env
@@ -56,10 +63,22 @@ CONNECTION_ARGS = {'uri': MILVUS_URI, 'token': MILVUS_TOKEN}
 
 
 
+url = "https://www.murphybooks.me"
+st.set_page_config(
+    page_title="Murphy's Library",
+    menu_items={
+        'About': url
+        
+    })
+st.title(f"[Murphy's Library]({url})") # Page title
 
 
-st.set_page_config(page_title="Murphy's Library")
-st.title("Murphy's Library") #페이지 제목
+
+
+
+
+
+
 
 model_name1 = 'gpt-3.5-turbo-0125'
 model_name2 = 'gpt-4-0125-preview'
@@ -76,6 +95,10 @@ if 'initial' not in st.session_state:
 
 if 'admin_status' not in st.session_state:
     st.session_state['admin_status'] = False  # Initialize the admin status
+
+if 'manual_session_value' not in st.session_state:
+    st.session_state.manual_session_value = ''
+
 
 # Use sidebar for model selection
 with st.sidebar:
@@ -101,44 +124,52 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["OpenAI", "AWS Bedrock", "Admin"])
 
 
-st.header("Library address")
-url = "https://www.murphybooks.me"
-st.write(f"[Murphy's Library]({url})")
+
 
 
 # Define checkboxes for user choices
-question = st.text_input("**Give me a question!**" ,placeholder="Enter your question")
-memory_session = st.text_input("**If you have information about the last session, you can continue the previous conversation.**" ,placeholder="Enter your Session string")
+question = st.text_input("**Give me a question!**" , placeholder="Enter your question")
+manual_session = st.text_input("**If you have information about the last session, you can continue the previous conversation.**" ,placeholder="Enter your Session string",key='widget',on_change=submit)
 go_button = st.button("Go", type="primary")
 
 
 prompt_template = hub.pull("murphy/librarian_guide")
 
 
+
+
+
+
+
+
 if go_button:
     with st.spinner("Working..."):
 
        # OpenAI models
-        
         if openai_choice and openai_choice != "none":
             with tab1:
-                st.header("OpenAI")
+                
                 llm = llm_model_openai_gpt3_5 if openai_choice == model_name1 else llm_model_openai_gpt4
+
+                record_button = st.button("Record", type="primary")
                 
-                                
-                st.write(memory_session)
-                print(memory_session)
-                history, query, answer, session = rm.Milvus_chain(question, llm, prompt_template,memory_session)
-                st.write(query)
-                st.write(answer)
-                st.write(session)
+            
+                if 'next_session' in st.session_state:    
+                    memory_session = st.session_state['next_session']
+                    st.write("Memory Session: " + memory_session)
+                else:
+                    memory_session= ''
+                    st.write("Memory Session: " + memory_session)
                 
+                history, query, answer, session = rm.Milvus_chain(question, llm, prompt_template, memory_session)
+                st.markdown(answer)
                 
+                st.session_state['next_session'] = session
                 
                 
                 with st.expander(label="Chat History", expanded=False):
-                    
-                    st.write(history)
+                    st.text(history)
+
         elif openai_choice:
             with tab1:
                 st.error("OpenAI models are not selected")
@@ -184,6 +215,18 @@ if st.session_state['admin_button']:
                     entitiy_memory = rm.MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
                     entitiy_memory.update_entity(file_path, entitiy_memory.vectorstore)
                 st.success('Upsert Done')
+        with col3:
+            st.header("Update base template")
+            
+            
+            base_button = st.button('Upsert base template to Vector DB', type="primary")
+            if upsert_button:
+                with st.spinner("Upsert base template"):
+                    file_path = './base_template.md'
+                    st.write(file_path)
+                    entitiy_memory = rm.MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
+                    entitiy_memory.update_entity(file_path, entitiy_memory.vectorstore)
+                st.success('Update Base temlplate Done')
             
             
 
