@@ -132,7 +132,7 @@ tab1, tab2, tab3 = st.tabs(["OpenAI", "AWS Bedrock", "Admin"])
 # Define checkboxes for user choices
 question = st.text_input("**Give me a question!**" , placeholder="Enter your question")
 
-manual_session_toggle = st.toogle("I have memory session")
+manual_session_toggle = st.toggle("I have memory session")
 if manual_session_toggle:
     manual_session = st.text_input("**If you have information about the last session, you can continue the previous conversation.**" ,placeholder="Enter your Session string",key='widget',on_change=submit)
 go_button = st.button("Go", type="primary")
