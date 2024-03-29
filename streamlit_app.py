@@ -17,9 +17,8 @@ import RAG_Milvus as rm
 
 
 ############## Streamlit Dynamic function
-def submit():
-    st.session_state.manual_session_value = st.session_state.widget
-    st.session_state.widget = ''
+# def submit():
+#     st.session_state.widget = ''
 
 
 ############### Special variables for Stramlit
@@ -85,9 +84,10 @@ model_name2 = 'gpt-4-0125-preview'
 model_name3 = 'amazon.titan-text-express-v1'
 embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
 
+
 llm_model_openai_gpt3_5 = ChatOpenAI(model_name=model_name1, temperature=0) 
 llm_model_openai_gpt4 = ChatOpenAI(model_name=model_name2, temperature=0) 
-llm_model_aws_bedrock = Bedrock(model_id = 'amazon.titan-text-express-v1', region_name="us-east-1")
+llm_model_aws_bedrock = "S"#Bedrock(model_id = 'amazon.titan-text-express-v1', region_name="us-east-1")
 
 
 if 'initial' not in st.session_state:
@@ -96,9 +96,8 @@ if 'initial' not in st.session_state:
 if 'admin_status' not in st.session_state:
     st.session_state['admin_status'] = False  # Initialize the admin status
 
-if 'manual_session_value' not in st.session_state:
-    st.session_state.manual_session_value = ''
-
+if 'manual' not in st.session_state:
+    st.session_state['manual'] = ''
 
 # Use sidebar for model selection
 with st.sidebar:
@@ -118,8 +117,10 @@ with st.sidebar:
     else:
         st.session_state['admin_button'] = False
     
-    # record_button = st.button("Record", type="primary") 
-
+    
+    manual_session = st.text_input("If you have information about the last session, you can continue the previous conversation.", placeholder="Enter your Session string", key='widget')
+    st.write(f'manual: {manual_session}')
+    
 
 
 # Main area: tabs for query input and results
@@ -129,43 +130,31 @@ tab1, tab2, tab3 = st.tabs(["OpenAI", "AWS Bedrock", "Admin"])
 
 
 
+
 # Define checkboxes for user choices
 question = st.text_input("**Give me a question!**" , placeholder="Enter your question")
-
-manual_session_toggle = st.toggle("I have memory session")
-if manual_session_toggle:
-    manual_session = st.text_input("**If you have information about the last session, you can continue the previous conversation.**" ,placeholder="Enter your Session string",key='widget')
-go_button = st.button("Go", type="primary",on_click=submit)
-
+go_button = st.button("Go", type="primary")
 
 prompt_template = hub.pull("murphy/librarian_guide")
 
 
-
-
-
-
-
-
 if go_button:
     with st.spinner("Working..."):
-
        # OpenAI models
         if openai_choice and openai_choice != "none":
-            with tab1:
-                
+            with tab1:                
                 llm = llm_model_openai_gpt3_5 if openai_choice == model_name1 else llm_model_openai_gpt4
-
                 
                 
-            
+                
                 if 'next_session' in st.session_state:    
                     memory_session = st.session_state['next_session']
                     st.write("Memory Session: " + memory_session)
-                elif manual_session_toggle == True:
+                elif manual_session:
                     memory_session = manual_session
-                    st.wrtie("Manuall Memory Session " + manual_session)
-                    manual_session_toggle = False
+                    st.write("Manuall Memory Session " + memory_session)
+                    manual_session =  ''
+                    
                 else:
                     memory_session= ''
                     st.write("No Memory Session: " + memory_session)
