@@ -162,9 +162,18 @@ if go_button:
                 if 'next_session' in st.session_state:    
                     memory_session = st.session_state['next_session']
                     st.write("Memory Session: " + memory_session)
+                elif manual_session:
+                    memory_session = manual_session
+                    st.wrtie("Manuall Memory Session " + manual_session)
+                    manual_session_toggle = False
                 else:
                     memory_session= ''
                     st.write("No Memory Session: " + memory_session)
+                
+                
+                
+                    
+                    
                 
                 history, query, answer, session = rm.Milvus_chain(question, llm, prompt_template, memory_session)
                 st.markdown(answer)
