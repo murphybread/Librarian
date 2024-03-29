@@ -118,7 +118,7 @@ with st.sidebar:
     else:
         st.session_state['admin_button'] = False
     
-    record_button = st.button("Record", type="primary") 
+    # record_button = st.button("Record", type="primary") 
 
 
 
