@@ -28,7 +28,7 @@ from dotenv import load_dotenv # Lading environment variables from a file
 from pathlib import Path # Intuitive path management regardless of OS
 
 # Milvus
-from pymilvus import Collection,connections
+from pymilvus import Collection,connections,MilvusClient
 import uuid
 
 
@@ -50,8 +50,8 @@ COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 # Class 
 class MilvusMemory:
     def __init__(self, embeddings,uri, token, collection_name,connection_args=CONNECTION_ARGS):
-        connections.connect("default", uri=uri, token=token)
-        self.collection = Collection(name=collection_name)
+        #connections.connect("default", uri=uri, token=token)
+        self.collection = MilvusClient(uri = MILVUS_URI, token= MILVUS_TOKEN)
         self.vectorstore = Milvus(
             embedding_function=embeddings,
             connection_args=connection_args,
@@ -61,11 +61,17 @@ class MilvusMemory:
         )
 
     def memory_insert(self, query, embedding,session=""):
-        
+
         vector = embedding.embed_query(query)
         if not session:
             session = str(uuid.uuid1())
-        self.collection.insert([[session], [query], [vector]])
+
+        print(type(session))
+        print(type(query))
+        print(type(vector))
+
+        data = [{"source": session, "text": query, "vector": vector},]
+        self.collection.upsert(collection_name= COLLECTION_NAME, data=data)
         return session
     
     def update_entity(self, file_path, vectorstore):
