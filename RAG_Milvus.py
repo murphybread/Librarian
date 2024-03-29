@@ -61,17 +61,23 @@ class MilvusMemory:
         )
 
     def memory_insert(self, query, embedding,session=""):
-
         vector = embedding.embed_query(query)
+        expr = f"source == '{session}'"
+        pks = vectorstore.get_pks(expr)
+
         if not session:
             session = str(uuid.uuid1())
+        else:
+            expr = f"source == '{session}'"
+            pks = vectorstore.get_pks(expr)
+            self.collection.delete(collection_name= COLLECTION_NAME, ids=pks)
+        
 
-        print(type(session))
-        print(type(query))
-        print(type(vector))
+        
 
-        data = [{"source": session, "text": query, "vector": vector},]
-        self.collection.upsert(collection_name= COLLECTION_NAME, data=data)
+        data = {"source": session, "text": query,"vector": vector}
+        
+        self.collection.insert(collection_name= COLLECTION_NAME, data=data)
         return session
     
     def update_entity(self, file_path, vectorstore):
@@ -232,7 +238,7 @@ def Milvus_chain(query, llm, prompt_template, session='', embeddings=''):
     milvus_memory = MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
     # print(milvus_memory, milvus_memory.vectorstore)
     history, question, answer = invoke_from_retriever(query, llm, prompt_template, milvus_memory.vectorstore, session)    
-    session = milvus_memory.memory_insert(history + "\nHUMAN:" + question + "\nAI:" + answer, embeddings)
+    session = milvus_memory.memory_insert(history + "\nHUMAN:" + question + "\nAI:" + answer, embeddings, session)
 
     
     return history, question, answer, session

@@ -116,7 +116,9 @@ with st.sidebar:
     if pwd == st.secrets["PASSWORD"]:
         st.session_state['admin_button'] = True
     else:
-        st.session_state['admin_button'] = False     
+        st.session_state['admin_button'] = False
+    
+    record_button = st.button("Record", type="primary") 
 
 
 
@@ -151,7 +153,7 @@ if go_button:
                 
                 llm = llm_model_openai_gpt3_5 if openai_choice == model_name1 else llm_model_openai_gpt4
 
-                record_button = st.button("Record", type="primary")
+                
                 
             
                 if 'next_session' in st.session_state:    
@@ -159,11 +161,10 @@ if go_button:
                     st.write("Memory Session: " + memory_session)
                 else:
                     memory_session= ''
-                    st.write("Memory Session: " + memory_session)
+                    st.write("No Memory Session: " + memory_session)
                 
                 history, query, answer, session = rm.Milvus_chain(question, llm, prompt_template, memory_session)
                 st.markdown(answer)
-                
                 st.session_state['next_session'] = session
                 
                 
