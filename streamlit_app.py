@@ -134,8 +134,8 @@ question = st.text_input("**Give me a question!**" , placeholder="Enter your que
 
 manual_session_toggle = st.toggle("I have memory session")
 if manual_session_toggle:
-    manual_session = st.text_input("**If you have information about the last session, you can continue the previous conversation.**" ,placeholder="Enter your Session string",key='widget',on_change=submit)
-go_button = st.button("Go", type="primary")
+    manual_session = st.text_input("**If you have information about the last session, you can continue the previous conversation.**" ,placeholder="Enter your Session string",key='widget')
+go_button = st.button("Go", type="primary",on_click=submit)
 
 
 prompt_template = hub.pull("murphy/librarian_guide")
@@ -162,7 +162,7 @@ if go_button:
                 if 'next_session' in st.session_state:    
                     memory_session = st.session_state['next_session']
                     st.write("Memory Session: " + memory_session)
-                elif manual_session:
+                elif manual_session_toggle == True:
                     memory_session = manual_session
                     st.wrtie("Manuall Memory Session " + manual_session)
                     manual_session_toggle = False
