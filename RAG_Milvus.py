@@ -4,6 +4,8 @@ import os
 ## Data
 from langchain_community.document_loaders import TextLoader,PyPDFLoader, Docx2txtLoader
 from langchain_text_splitters import CharacterTextSplitter, RecursiveCharacterTextSplitter
+from langchain_core.documents.base import Document
+
 
 ## DB
 from langchain_community.vectorstores import Milvus
@@ -48,10 +50,11 @@ COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 
 
 # Class 
+
 class MilvusMemory:
     def __init__(self, embeddings,uri, token, collection_name,connection_args=CONNECTION_ARGS):
         #connections.connect("default", uri=uri, token=token)
-        self.collection = MilvusClient(uri = MILVUS_URI, token= MILVUS_TOKEN)
+        self.collection = MilvusClient(uri = uri, token= token)
         self.vectorstore = Milvus(
             embedding_function=embeddings,
             connection_args=connection_args,
@@ -59,23 +62,31 @@ class MilvusMemory:
             drop_old=False,
             auto_id=True
         )
+        self.embeddings = embeddings
 
-    def memory_insert(self, query, embedding,session=""):
-        vector = embedding.embed_query(query)
+    def memory_insert(self, query, session=""):
+
+        if isinstance(query, str):
+            text_to_embed = query
+        else:
+            text_to_embed = query.page_content
+
+
+        vector = self.embeddings.embed_query(text_to_embed)
         expr = f"source == '{session}'"
-        pks = vectorstore.get_pks(expr)
+        pks = self.vectorstore.get_pks(expr)
 
         if not session:
             session = str(uuid.uuid1())
         else:
             expr = f"source == '{session}'"
-            pks = vectorstore.get_pks(expr)
-            self.collection.delete(collection_name= COLLECTION_NAME, ids=pks)
-        
+            pks = self.vectorstore.get_pks(expr)
+            if pks:
+                self.collection.delete(collection_name=COLLECTION_NAME, ids=pks)
 
+                
         
-
-        data = {"source": session, "text": query,"vector": vector}
+        data = {"source": session, "text": text_to_embed ,"vector": vector}
         
         self.collection.insert(collection_name= COLLECTION_NAME, data=data)
         return session
@@ -126,10 +137,34 @@ class MilvusMemory:
 
         print("-----------Upsert finished-----------")
         return None
-
-
-
     
+    def create_or_update_collection(self, splits_path='./', chunk_size=CHUNK_SIZE):
+        # Walk through all directories and files starting at splits_path
+        for root, _, files in os.walk(splits_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                # Assuming TextLoader and RecursiveCharacterTextSplitter have methods to process single files
+                # Adjust loader as per your file processing requirement
+                loader = TextLoader(file_path)
+                documents = loader.load()
+                text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size)
+                splits = text_splitter.split_documents(documents)
+
+                # For each split, update the collection
+                for split in splits:
+                    # Generate a unique session or use file path as identifier
+                    session = file_path  # or any unique identifier as per your logic
+                    # Update collection for each document split
+                    self.memory_insert(query=split, session=session)
+
+        print(f"Collection updated with documents from {splits_path}.")
+
+    def Milvus_chain(self, query, llm, prompt_template, session=''):
+        # Example: Assuming llm and prompt_template are used in a method like invoke_from_retriever
+        history, question, answer = invoke_from_retriever(query, llm, prompt_template, self.vectorstore, session)    
+        session = self.memory_insert(history + "\nHUMAN:" + question + "\nAI:" + answer, session=session)
+        return history, question, answer, session
+
 
 
 def load_base_template(file_path):
@@ -139,26 +174,16 @@ def load_base_template(file_path):
         return ""
 
 
-def split_mutiple_documents(current_path,chunk_size: int):
+def split_multiple_documents(current_path, chunk_size: int):
     documents = []
 
-    for file in os.listdir():
-        if file.endswith('.pdf'):
-            pdf_path = './docs/' + file
-            loader = PyPDFLoader(pdf_path)
-            documents.extend(loader.load())
-        elif file.endswith('.docx') or file.endswith('.doc'):
-            doc_path = './docs/' + file
-            loader = Docx2txtLoader(doc_path)
-            documents.extend(loader.load())
-        if file.endswith('.txt'):
-            text_path = current_path + file
-            loader = TextLoader(text_path)
-            documents.extend(loader.load())
-        if file.endswith('.md'):
-            text_path = current_path + file
-            loader = TextLoader(text_path)
-            documents.extend(loader.load())
+    # Walk through all directories and files starting at current_path
+    for root, dirs, files in os.walk(current_path):
+        for file in files:
+            if file.endswith('.txt') or file.endswith('.md'):
+                text_path = os.path.join(root, file)  # Correctly join the path to the file
+                loader = TextLoader(text_path)
+                documents.extend(loader.load())
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size)
     all_splits = text_splitter.split_documents(documents)
@@ -166,15 +191,15 @@ def split_mutiple_documents(current_path,chunk_size: int):
 
 
 
-def create_collection(collection_name=COLLECTION_NAME, connection_args= CONNECTION_ARGS, embeddings= '',splits =''):
 
-    if splits == '':
-        splits = split_mutiple_documents('./', CHUNK_SIZE)
+def create_collection(collection_name=COLLECTION_NAME, connection_args= CONNECTION_ARGS, embeddings= '',splits_path ='./'):
+    
+    splits = split_multiple_documents(splits_path, CHUNK_SIZE) if splits_path else './'
 
     if embeddings == '':
         embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
     
-    print(f"----------Embedding Starting from ALL files to Milvus----------")
+    print(f"----------Embedding Starting from {splits_path} to Milvus----------")
     vector_store = Milvus(
     embedding_function=embeddings,
     connection_args=connection_args,
@@ -188,7 +213,7 @@ def create_collection(collection_name=COLLECTION_NAME, connection_args= CONNECTI
     collection_name=collection_name,
     connection_args=connection_args,
     )
-    print(f"----------Embedding has Finished ALL files intto Milvus----------")
+    print(f"----------Embedding has Finished {splits_path} files into Milvus----------")
     return None
 
 
@@ -207,10 +232,12 @@ def vectorstore_milvus(embeddings , connection_args=CONNECTION_ARGS, collection_
 
 def invoke_from_retriever(query, llm, prompt_template, vectorstore , uuid=''):    
     expr = f"source == '{uuid}'"
-    retrieverOptions = {"expr": expr , 'k' : 1}
+    retrieverOptions = {"expr": expr , 'k' : 2}
     pks = vectorstore.get_pks(expr)
     retriever = vectorstore.as_retriever(search_kwargs=retrieverOptions)
     
+    print(f'pks: {pks}')
+    print(f'retriever : {retriever}')
     if pks:        
         history = retriever.get_relevant_documents(query)[0].page_content + "\n"
     else:
@@ -230,35 +257,43 @@ def invoke_from_retriever(query, llm, prompt_template, vectorstore , uuid=''):
     return history, query, answer
 
 
-def Milvus_chain(query, llm, prompt_template, session='', embeddings=''):
-    if embeddings == '':
-        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+
+# def Milvus_chain(query, llm, prompt_template, session='', embeddings=''):
+#     if embeddings == '':    
+#         embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     
     
-    milvus_memory = MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
-    # print(milvus_memory, milvus_memory.vectorstore)
-    history, question, answer = invoke_from_retriever(query, llm, prompt_template, milvus_memory.vectorstore, session)    
-    session = milvus_memory.memory_insert(history + "\nHUMAN:" + question + "\nAI:" + answer, embeddings, session)
+#     milvus_memory = MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
+#     # print(milvus_memory, milvus_memory.vectorstore)
+#     history, question, answer = invoke_from_retriever(query, llm, prompt_template, milvus_memory.vectorstore, session)    
+#     session = milvus_memory.memory_insert(history + "\nHUMAN:" + question + "\nAI:" + answer, embeddings, session)
 
     
-    return history, question, answer, session
+#     return history, question, answer, session
 
 # Implement
 
 
-docs_splits = split_mutiple_documents('./', CHUNK_SIZE)
+docs_splits = split_multiple_documents('./', CHUNK_SIZE)
 prompt_template = hub.pull("murphy/librarian_guide")
 embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
 llm = ChatOpenAI(model_name=MODEL_NAME, temperature=0) 
 vectorstore = vectorstore_milvus(embeddings)
 
+history , query , answer = invoke_from_retriever("HUMAN:Hello we talk about gitlab AI:Based on the information available in Murphy's library, here is a relevant file: - **File Path**: 200/210/210.20/210.20 a.md - **Description**: The solution about Gitlab. GitLab is one devsecops solution a" +"What is about detailed?", llm, prompt_template, vectorstore , uuid='../../200/210/210.20/210.20 a.md')
+print(f'history: {history}')
+print(f'query : {query}')
+print(f'answer :{answer}')
 
 
+def extract_pattern(string):
+    prefix = "../../"
+    if string.startswith(prefix):
+        return string[len(prefix):]
+    else:
+        return string
 
 
+# create_collection(splits_path='../../200')
 
-
-# history1, question1, answer1,session1 = Milvus_chain("What is number about EDA?",llm,prompt_template)
-# print(history1, question1, answer1,session1)
-# # f1 = Milvus_chain("What is description about EDA?",llm,prompt_template)
 

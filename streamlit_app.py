@@ -158,13 +158,9 @@ if go_button:
                 else:
                     memory_session= ''
                     st.write("No Memory Session: " + memory_session)
-                
-                
-                
-                    
-                    
-                
-                history, query, answer, session = rm.Milvus_chain(question, llm, prompt_template, memory_session)
+
+                milvus_class = rm.MilvusMemory(embeddings,MILVUS_URI,MILVUS_TOKEN,COLLECTION_NAME)
+                history, query, answer, session = milvus_class.Milvus_chain(question, llm, prompt_template, memory_session)
                 st.markdown(answer)
                 st.session_state['next_session'] = session
                 
@@ -190,13 +186,12 @@ if go_button:
                 st.error("AWS Bedrock models are not supported yet")
 
         
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 if st.session_state['admin_button']:
     
     with tab3:
         st.header("Admin activated")
-        
         with col1:
             st.header("Create VectorDB")
     
@@ -207,9 +202,9 @@ if st.session_state['admin_button']:
                     rm.create_collection()
                 st.success('Embedding Done')
         with col2:
-            st.header("Update single entity")
+            st.header("**Update** Entitys by file path")
             
-            file_path = st.text_input( " **Write pifePath**" , placeholder="Enter your question")
+            file_path = st.text_input( "**Update** Entity: Write filePath" , placeholder="Enter your filePath")
             upsert_button = st.button('Upsert Entity of DB', type="primary")
             if upsert_button:
                 with st.spinner("Upsert Started"):
@@ -218,18 +213,30 @@ if st.session_state['admin_button']:
                     entitiy_memory.update_entity(file_path, entitiy_memory.vectorstore)
                 st.success('Upsert Done')
         with col3:
+            st.header("**Create** Entitys by file path")
+            
+            file_path = st.text_input( "**Create** Entity: Write fieePath" , placeholder="Enter your filePath")
+
+            file_path = rm.extract_pattern(file_path)
+            create_button = st.button('Create Entity of DB', type="primary")
+            if create_button:
+                with st.spinner("Create Started"):
+                    st.write(file_path)
+                    entitiy_memory = rm.MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
+                    entitiy_memory.create_or_update_collection(file_path)
+                st.success('Create Done')
+        with col4:
             st.header("Update base template")
             
             
             base_button = st.button('Upsert base template to Vector DB', type="primary")
-            if upsert_button:
+            if base_button:
                 with st.spinner("Upsert base template"):
                     file_path = './base_template.md'
                     st.write(file_path)
                     entitiy_memory = rm.MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
                     entitiy_memory.update_entity(file_path, entitiy_memory.vectorstore)
                 st.success('Update Base temlplate Done')
-            
             
 
 
