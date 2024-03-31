@@ -49,8 +49,7 @@ CONNECTION_ARGS = {'uri': MILVUS_URI, 'token': MILVUS_TOKEN}
 COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 
 
-# Class 
-
+# Class Milvus
 class MilvusMemory:
     def __init__(self, embeddings,uri, token, collection_name,connection_args=CONNECTION_ARGS):
         #connections.connect("default", uri=uri, token=token)
@@ -70,22 +69,19 @@ class MilvusMemory:
             text_to_embed = query
         else:
             text_to_embed = query.page_content
-
-
-        vector = self.embeddings.embed_query(text_to_embed)
-        expr = f"source == '{session}'"
-        pks = self.vectorstore.get_pks(expr)
-
-        if not session:
+            
+        if not session.strip() or session == '.' or not Path(session).is_file():
             session = str(uuid.uuid1())
         else:
+            session = Path(session).as_posix()
             expr = f"source == '{session}'"
+            expr = expr.encode('utf-8', 'ignore').decode('utf-8')
             pks = self.vectorstore.get_pks(expr)
             if pks:
                 self.collection.delete(collection_name=COLLECTION_NAME, ids=pks)
 
-                
-        
+
+        vector = self.embeddings.embed_query(text_to_embed)                
         data = {"source": session, "text": text_to_embed ,"vector": vector}
         
         self.collection.insert(collection_name= COLLECTION_NAME, data=data)
@@ -139,32 +135,74 @@ class MilvusMemory:
         return None
     
     def create_or_update_collection(self, splits_path='./', chunk_size=CHUNK_SIZE):
-        # Walk through all directories and files starting at splits_path
-        for root, _, files in os.walk(splits_path):
-            for file in files:
-                file_path = os.path.join(root, file)
-                # Assuming TextLoader and RecursiveCharacterTextSplitter have methods to process single files
-                # Adjust loader as per your file processing requirement
-                loader = TextLoader(file_path)
-                documents = loader.load()
-                text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size)
-                splits = text_splitter.split_documents(documents)
+        # Transform splits_path to Path object 
+        splits_path = Path(splits_path)
+        
+        # Use Path objects to navigate directories and files
+        for file_path in splits_path.rglob('*.md'):
+            # Transform POSIX style string to file path 
+            session = file_path.as_posix()
+            
+            print(f'after as_posix session: {session}')
+            # Using TextLoader and RecursiveCharacterTextSplitter to Process Files
+            loader = TextLoader(session)
+            documents = loader.load()
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size)
+            splits = text_splitter.split_documents(documents)
 
-                # For each split, update the collection
-                for split in splits:
-                    # Generate a unique session or use file path as identifier
-                    session = file_path  # or any unique identifier as per your logic
-                    # Update collection for each document split
-                    self.memory_insert(query=split, session=session)
+            # Update the collection for each split
+            for split in splits:
+                self.memory_insert(query=split, session=session)
 
-        print(f"Collection updated with documents from {splits_path}.")
-
-    def Milvus_chain(self, query, llm, prompt_template, session=''):
-        # Example: Assuming llm and prompt_template are used in a method like invoke_from_retriever
-        history, question, answer = invoke_from_retriever(query, llm, prompt_template, self.vectorstore, session)    
+    def Milvus_chain(self, query, llm, prompt_template, session='',file_path_session=''):
+        
+        print(f"befre invoke from milvus_chain session : {session} ")
+        print(f"befre invoke from milvus_chain file_path_session : {file_path_session} ")
+        if len(file_path_session) > 2:
+            file_history, file_question, file_answer = invoke_from_retriever(query, llm, prompt_template, self.vectorstore, file_path_session)
+            file_info = f"\nInformation: {file_path_session}\n{file_history}"
+            
+            print(f'file_history : {file_history}')
+            print(f'file_question : {file_question}')
+            print(f'file_answer : {file_answer}')
+            
+            
+            print(f"before file_path query : {query}")
+            query = query + file_info
+            print(f"after file_path query : {query}")
+        
+        history, question, answer = invoke_from_retriever(query, llm, prompt_template, self.vectorstore, session)
+        print(f"after invoke milvus_chain question : {question} ")
+        print(f"after invoke milvus_chain answer : {answer} ")
         session = self.memory_insert(history + "\nHUMAN:" + question + "\nAI:" + answer, session=session)
         return history, question, answer, session
 
+
+def invoke_from_retriever(query, llm, prompt_template, vectorstore , uuid=''):    
+    expr = f"source == '{uuid}'"
+    retrieverOptions = {"expr": expr , 'k' : 1}
+    pks = vectorstore.get_pks(expr)
+    retriever = vectorstore.as_retriever(search_kwargs=retrieverOptions)
+    
+    print(f'pks: {pks}')
+    print(f'retriever : {retriever}')
+    if pks:        
+        history = retriever.get_relevant_documents(query)[0].page_content + "\n"
+    else:
+        history = ""
+            
+    # Set up the components of the chain.
+    setup_and_retrieval = RunnableParallel(
+        Library_base_knowledge =  RunnableLambda(lambda _: load_base_template(BASE_FILE_PATH)),
+        history_conversation=RunnableLambda(lambda _: history),  # Use RunnableLambda for static content
+        input=RunnablePassthrough()  # This can just pass the question as is
+    )
+
+    # Construct and invoke the chain
+    rag_chain = setup_and_retrieval | prompt_template | llm
+    answer = rag_chain.invoke(query).content.rstrip("\nNone")
+    
+    return history, query, answer
 
 
 def load_base_template(file_path):
@@ -190,7 +228,29 @@ def split_multiple_documents(current_path, chunk_size: int):
     return all_splits
 
 
+def extract_path(query, keyword='file_path: '):    
+    # 'file_path: ' Find path by ketword        
+    if keyword not in query:
+        return ''
+    start_index = query.find(keyword)
+    prefix = '../../'
+     
+    
+    if start_index != -1:
+        # 'file_path: ' 
+        start_index += len(keyword)
+        temp_extract = query[start_index:]
 
+        # Find postion '.md' from temp_extract string
+        end_index = temp_extract.find('.md')
+
+        if end_index != -1:
+            # Extract final path that include '.md'
+            extracted_path = temp_extract[:end_index + len('.md')]
+            return prefix + extracted_path
+        else:
+            print("'.md' not found.")
+    
 
 def create_collection(collection_name=COLLECTION_NAME, connection_args= CONNECTION_ARGS, embeddings= '',splits_path ='./'):
     
@@ -230,68 +290,24 @@ def vectorstore_milvus(embeddings , connection_args=CONNECTION_ARGS, collection_
     return vectorstore
 
 
-def invoke_from_retriever(query, llm, prompt_template, vectorstore , uuid=''):    
-    expr = f"source == '{uuid}'"
-    retrieverOptions = {"expr": expr , 'k' : 2}
-    pks = vectorstore.get_pks(expr)
-    retriever = vectorstore.as_retriever(search_kwargs=retrieverOptions)
-    
-    print(f'pks: {pks}')
-    print(f'retriever : {retriever}')
-    if pks:        
-        history = retriever.get_relevant_documents(query)[0].page_content + "\n"
-    else:
-        history = ""
-            
-    # Set up the components of the chain.
-    setup_and_retrieval = RunnableParallel(
-        Library_base_knowledge =  RunnableLambda(lambda _: load_base_template(BASE_FILE_PATH)),
-        history_conversation=RunnableLambda(lambda _: history),  # Use RunnableLambda for static content
-        input=RunnablePassthrough()  # This can just pass the question as is
-    )
-
-    # Construct and invoke the chain
-    rag_chain = setup_and_retrieval | prompt_template | llm
-    answer = rag_chain.invoke(query).content.rstrip("\nNone")
-    
-    return history, query, answer
-
-
-
-# def Milvus_chain(query, llm, prompt_template, session='', embeddings=''):
-#     if embeddings == '':    
-#         embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-    
-    
-#     milvus_memory = MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
-#     # print(milvus_memory, milvus_memory.vectorstore)
-#     history, question, answer = invoke_from_retriever(query, llm, prompt_template, milvus_memory.vectorstore, session)    
-#     session = milvus_memory.memory_insert(history + "\nHUMAN:" + question + "\nAI:" + answer, embeddings, session)
-
-    
-#     return history, question, answer, session
-
-# Implement
-
-
 docs_splits = split_multiple_documents('./', CHUNK_SIZE)
 prompt_template = hub.pull("murphy/librarian_guide")
 embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
 llm = ChatOpenAI(model_name=MODEL_NAME, temperature=0) 
 vectorstore = vectorstore_milvus(embeddings)
 
-history , query , answer = invoke_from_retriever("HUMAN:Hello we talk about gitlab AI:Based on the information available in Murphy's library, here is a relevant file: - **File Path**: 200/210/210.20/210.20 a.md - **Description**: The solution about Gitlab. GitLab is one devsecops solution a" +"What is about detailed?", llm, prompt_template, vectorstore , uuid='../../200/210/210.20/210.20 a.md')
-print(f'history: {history}')
-print(f'query : {query}')
-print(f'answer :{answer}')
+# history , query , answer = invoke_from_retriever("HUMAN:Hello we talk about gitlab AI:Based on the information available in Murphy's library, here is a relevant file: - **File Path**: 200/210/210.20/210.20 a.md - **Description**: The solution about Gitlab. GitLab is one devsecops solution a" +"What is about detailed?", llm, prompt_template, vectorstore , uuid='../../200/210/210.20/210.20 a.md')
+# print(f'history: {history}')
+# print(f'query : {query}')
+# print(f'answer :{answer}')
 
 
-def extract_pattern(string):
-    prefix = "../../"
-    if string.startswith(prefix):
-        return string[len(prefix):]
-    else:
-        return string
+# def extract_pattern(string):
+#     prefix = "../../"
+#     if string.startswith(prefix):
+#         return string[len(prefix):]
+#     else:
+#         return string
 
 
 # create_collection(splits_path='../../200')
