@@ -225,10 +225,10 @@ if st.session_state['admin_button']:
     
             create_button = st.button('Create VectorDB', type="primary")
             
-            if create_button:
-                with st.spinner("Embedding Started"):
-                    rm.create_collection()
-                st.success('Embedding Done')
+            # if create_button:
+            #     with st.spinner("Embedding Started"):
+            #         rm.create_collection()
+            #     st.success('Embedding Done')
         with col2:
             st.header("**Update** Entitys")
             
