@@ -148,6 +148,7 @@ tab1, tab2, tab3 = st.tabs(["OpenAI", "AWS Bedrock", "Admin"])
 
 # Define checkboxes for user choices
 query = st.text_input("**Give me a question!**" , placeholder="Enter your question")
+st.info('There is special patter file_path: ....md', icon="ℹ️")
 go_button = st.button("Go", type="primary")
 
 prompt_template = hub.pull("murphy/librarian_guide")
