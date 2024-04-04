@@ -6,7 +6,6 @@ from langchain_community.document_loaders import TextLoader,PyPDFLoader, Docx2tx
 from langchain_text_splitters import CharacterTextSplitter, RecursiveCharacterTextSplitter
 from langchain_core.documents.base import Document
 
-
 ## DB
 from langchain_community.vectorstores import Milvus
 
@@ -182,18 +181,31 @@ def invoke_from_retriever(query, llm, prompt_template, vectorstore , uuid=''):
     expr = f"source == '{uuid}'"
     retrieverOptions = {"expr": expr , 'k' : 1}
     pks = vectorstore.get_pks(expr)
-    retriever = vectorstore.as_retriever(search_kwargs=retrieverOptions)
+    
     
     print(f'pks: {pks}')
-    print(f'retriever : {retriever}')
+    
     if pks:        
+        retriever = vectorstore.as_retriever(search_kwargs=retrieverOptions)
         history = retriever.get_relevant_documents(query)[0].page_content + "\n"
     else:
         history = ""
-            
+    
+    expr_base = f"source == '{BASE_FILE_PATH}'"
+    retrieverOptions_base = {"expr": expr_base , 'k' : 1}
+    pks_base = vectorstore.get_pks(expr_base)
+
+    if pks_base:
+        retriever_base = vectorstore.as_retriever(search_kwargs=retrieverOptions_base)
+        knowledge = retriever_base.get_relevant_documents("base_query")[0].page_content
+    else:
+        knowledge = "No base template in vectorstore"
+
+    print("knowledge\n" + knowledge)
+    
     # Set up the components of the chain.
     setup_and_retrieval = RunnableParallel(
-        Library_base_knowledge =  RunnableLambda(lambda _: load_base_template(BASE_FILE_PATH)),
+        Library_base_knowledge =  RunnableLambda(lambda _ : knowledge),
         history_conversation=RunnableLambda(lambda _: history),  # Use RunnableLambda for static content
         input=RunnablePassthrough()  # This can just pass the question as is
     )
@@ -203,13 +215,6 @@ def invoke_from_retriever(query, llm, prompt_template, vectorstore , uuid=''):
     answer = rag_chain.invoke(query).content.rstrip("\nNone")
     
     return history, query, answer
-
-
-def load_base_template(file_path):
-    try:
-        return Path(file_path).read_text(encoding='utf-8')
-    except FileNotFoundError:
-        return ""
 
 
 def split_multiple_documents(current_path, chunk_size: int):
@@ -290,11 +295,11 @@ def vectorstore_milvus(embeddings , connection_args=CONNECTION_ARGS, collection_
     return vectorstore
 
 
-docs_splits = split_multiple_documents('./', CHUNK_SIZE)
-prompt_template = hub.pull("murphy/librarian_guide")
-embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
-llm = ChatOpenAI(model_name=MODEL_NAME, temperature=0) 
-vectorstore = vectorstore_milvus(embeddings)
+# docs_splits = split_multiple_documents('./', CHUNK_SIZE)
+# prompt_template = hub.pull("murphy/librarian_guide")
+# embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
+# llm = ChatOpenAI(model_name=MODEL_NAME, temperature=0) 
+# vectorstore = vectorstore_milvus(embeddings)
 
 # history , query , answer = invoke_from_retriever("HUMAN:Hello we talk about gitlab AI:Based on the information available in Murphy's library, here is a relevant file: - **File Path**: 200/210/210.20/210.20 a.md - **Description**: The solution about Gitlab. GitLab is one devsecops solution a" +"What is about detailed?", llm, prompt_template, vectorstore , uuid='../../200/210/210.20/210.20 a.md')
 # print(f'history: {history}')
@@ -311,5 +316,4 @@ vectorstore = vectorstore_milvus(embeddings)
 
 
 # create_collection(splits_path='../../200')
-
 

@@ -260,7 +260,7 @@ if st.session_state['admin_button']:
             base_button = st.button('Upsert base template', type="primary")
             if base_button:
                 with st.spinner("Upsert base template"):
-                    file_path = '../Manage/base_template.md'
+                    file_path = '../base_template.md'
                     st.write(file_path)
                     entitiy_memory = rm.MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
                     entitiy_memory.update_entity(file_path, entitiy_memory.vectorstore)
