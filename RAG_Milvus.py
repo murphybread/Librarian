@@ -84,6 +84,7 @@ class MilvusMemory:
         data = {"source": session, "text": text_to_embed ,"vector": vector}
         
         self.collection.insert(collection_name= COLLECTION_NAME, data=data)
+        print(f'session: {session} is inserted')
         return session
     
     def update_entity(self, file_path, vectorstore):
@@ -191,6 +192,7 @@ def invoke_from_retriever(query, llm, prompt_template, vectorstore , uuid=''):
     else:
         history = ""
     
+
     expr_base = f"source == '{BASE_FILE_PATH}'"
     retrieverOptions_base = {"expr": expr_base , 'k' : 1}
     pks_base = vectorstore.get_pks(expr_base)

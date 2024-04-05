@@ -181,9 +181,10 @@ if go_button:
             memory_session= ''
             st.write("No Memory Session: " + memory_session)    
         
-        
         file_path_session = rm.extract_path(query)
         milvus_class = rm.MilvusMemory(embeddings,MILVUS_URI,MILVUS_TOKEN,COLLECTION_NAME)
+
+        st.write("File path Session: " + file_path_session)
         
         
         history, question, answer, session = milvus_class.Milvus_chain(query, llm, prompt_template, memory_session,file_path_session)
@@ -226,10 +227,10 @@ if st.session_state['admin_button']:
     
             create_button = st.button('Create VectorDB', type="primary")
             
-            # if create_button:
-            #     with st.spinner("Embedding Started"):
-            #         rm.create_collection()
-            #     st.success('Embedding Done')
+            if create_button:
+                with st.spinner("Embedding Started"):
+                    rm.create_collection()
+                st.success('Embedding Done')
         with col2:
             st.header("**Update** Entitys")
             
@@ -258,7 +259,7 @@ if st.session_state['admin_button']:
             st.header("Update base template")
             
             
-            base_button = st.button('Upsert base template', type="primary")
+            base_button = st.button('Upsert base file', type="primary")
             if base_button:
                 with st.spinner("Upsert base template"):
                     file_path = '../base_template.md'
