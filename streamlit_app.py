@@ -69,7 +69,7 @@ st.set_page_config(
         'About': url
         
     })
-st.title(f"[Murphy's Library]({url})") # Page title
+st.title(f"[Murphy's Library]({url})\n **Charles, the librarian, will help you find information in Murphy's library. He'll give you general answers in the first conversation. But, If you have a memory session, or if you have a file path, he'll help you in more detail.**") # Page title
 
 
 
