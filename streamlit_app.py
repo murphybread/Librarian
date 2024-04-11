@@ -69,7 +69,7 @@ st.set_page_config(
         'About': url
         
     })
-st.title(f"[Murphy's Library]({url})\n **Charles, the librarian, will help you find information in Murphy's library. He'll give you general answers in the first conversation. But, If you have a memory session, or if you have a file path, he'll help you in more detail.**") # Page title
+st.title(f"[Murphy's Library]({url})\n **Charles, the librarian, will help you find information in Murphy's library.\nHe'll give you general answers in the first conversation. But, If you have a memory session, or if you have a file path, he'll help you in more detail.**") # Page title
 
 
 
@@ -79,14 +79,15 @@ st.title(f"[Murphy's Library]({url})\n **Charles, the librarian, will help you f
 
 
 
-model_name1 = 'gpt-3.5-turbo-0125'
-model_name2 = 'gpt-4-0125-preview'
+model_name1 = 'gpt-4-0125-preview'
+
+model_name2 = 'gpt-3.5-turbo-0125'
 model_name3 = 'amazon.titan-text-express-v1'
-embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
+# embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
 
 
-llm_model_openai_gpt3_5 = ChatOpenAI(model_name=model_name1, temperature=0) 
-llm_model_openai_gpt4 = ChatOpenAI(model_name=model_name2, temperature=0) 
+# llm_model_openai_gpt3_5 = ChatOpenAI(model_name=model_name1, temperature=0) 
+# llm_model_openai_gpt4 = ChatOpenAI(model_name=model_name2, temperature=0) 
 llm_model_aws_bedrock = "S"#Bedrock(model_id = 'amazon.titan-text-express-v1', region_name="us-east-1")
 
 
@@ -112,6 +113,11 @@ if 'answer' not in st.session_state:
 if 'history' not in st.session_state:
     st.session_state['history'] = False
 
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+    
+if "next_session" not in st.session_state:
+    st.session_state.next_session = ""
 
 
 # Use sidebar for model selection
@@ -119,9 +125,9 @@ with st.sidebar:
     st.header("Select Model")
     
     st.subheader("OpenAI")
-    openai_choice = st.radio ("OpenAI models", ("none",model_name1,model_name2))
+    openai_choice = st.radio ("OpenAI models", (model_name1,"none"))
     
-    st.subheader("AWS Bedrock")
+    st.subheader("AWS Bedrock **(Not Supported)**")
     aws_bedrock_choice = st.radio ("AWS Bedrock models", ["none"])
     
     # Enable and disable by password for Admin status
@@ -139,82 +145,141 @@ with st.sidebar:
 
 
 # Main area: tabs for query input and results
-tab1, tab2, tab3 = st.tabs(["OpenAI", "AWS Bedrock", "Admin"])
+tab1, tab2, tab3 = st.tabs(["OpenAI", "AWS Bedrock **(Not Supported)**", "Admin"])
 
 
 
-
-
-
-# Define checkboxes for user choices
-query = st.text_input("**Give me a question!**" , placeholder="Enter your question")
-st.info('There is special patter file_path: ....md', icon="ℹ️")
-go_button = st.button("Go", type="primary")
 
 prompt_template = hub.pull("murphy/librarian_guide")
 
-if go_button:
-    st.session_state['start'] =True
+
+for message in st.session_state.messages:    
+    if message["role"] == 'user':
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+    else:
+        with st.chat_message(message["role"],avatar='50486329.png'):
+            st.markdown(message["content"])
+
+
+@st.cache_resource
+def load_llm(model_name):
+    return ChatOpenAI(model_name=model_name, temperature=0.05)
+
+@st.cache_resource
+def load_embeddings(model_name):
+    return OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
+
+@st.cache_resource
+def load_milvus(_embedding):
+    milvus = rm.MilvusMemory(_embedding,MILVUS_URI,MILVUS_TOKEN,COLLECTION_NAME)
+    return  milvus
+
+# OpenAI models LLM and Embedding
+if openai_choice != "none":
+    llm = load_llm(model_name1)
+    embeddings = load_embeddings(EMBEDDING_MODEL_NAME)
+    milvus = load_milvus(embeddings)
+elif openai_choice:
+    st.error("OpenAI models are not selected")
+
+
+
+
+def get_respone(llm,milvus,query,session, file_path_session):
     
-
-if st.session_state['start']:    
-    # OpenAI models
-    if openai_choice and openai_choice != "none":            
-        with tab1:                
-            llm = llm_model_openai_gpt3_5 if openai_choice == model_name1 else llm_model_openai_gpt4                                                    
-            
-    elif openai_choice:
-        st.error("OpenAI models are not selected")
-
-                
+        
+    history, question, answer, session = milvus.Milvus_chain(query, llm, prompt_template, session,file_path_session)
     
-if go_button:
-    with st.spinner("Working..."):
-        if 'next_session' in st.session_state:    
-            memory_session = st.session_state['next_session']
-            st.write("Memory Session: " + memory_session)
-        elif len(manual_session) > 2:
-            memory_session = manual_session
-            st.write("Manuall Memory Session " + memory_session)
-            manual_session =  ''                    
-        else:
-            memory_session= ''
-            st.write("No Memory Session: " + memory_session)    
-        
-        file_path_session = rm.extract_path(query)
-        milvus_class = rm.MilvusMemory(embeddings,MILVUS_URI,MILVUS_TOKEN,COLLECTION_NAME)
+    st.markdown(history)
+    st.markdown(question)
+    st.markdown(answer)
+    st.markdown(session)
+    
+    # if 'Answer:' in answer:
+    #     return answer.replace('Answer:', ''), session
+    
+    return answer,session
 
-        st.write("File path Session: " + file_path_session)
+
+
+
+
+if prompt:= st.chat_input("If you have any questions, can you write them here?"):
+    if st.session_state['next_session']:
+        memory_session = st.session_state['next_session']
+    else:
+        memory_session = ''
+        
+    
+    with st.chat_message("user"):
+        st.markdown(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        info_file_path =  rm.extract_path(prompt)
         
         
-        history, question, answer, session = milvus_class.Milvus_chain(query, llm, prompt_template, memory_session,file_path_session)
-        
-        
-        st.session_state['question'] = question
-        st.session_state['answer'] = answer
-        st.session_state['history'] = history
+        response, session = get_respone(llm,milvus,prompt , memory_session, info_file_path)
+        st.write(f"memory_session: {memory_session}")
+        st.write(f"session: {session}")
         st.session_state['next_session'] = session
+    
+    with st.chat_message("assistant",avatar='50486329.png'):
+        st.markdown(response)
+    # Add assistant response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": response})
+
+    
+                
+# st.chat_message("Charles")
+
+# if go_button:
+#     with st.spinner("Working..."):
+#         if 'next_session' in st.session_state:    
+#             memory_session = st.session_state['next_session']
+#             st.write("Memory Session: " + memory_session)
+#         elif len(manual_session) > 2:
+#             memory_session = manual_session
+#             st.write("Manuall Memory Session " + memory_session)
+#             manual_session =  ''                    
+#         else:
+#             memory_session= ''
+#             st.write("No Memory Session: " + memory_session)    
+        
+#         file_path_session = rm.extract_path(query)
+#         milvus_class = rm.MilvusMemory(embeddings,MILVUS_URI,MILVUS_TOKEN,COLLECTION_NAME)
+
+#         st.write("File path Session: " + file_path_session)
+         
+        
+#         history, question, answer, session = milvus_class.Milvus_chain(query, llm, prompt_template, memory_session,file_path_session)
         
         
-        st.text(st.session_state['answer'])
+#         st.session_state['question'] = question
+#         st.session_state['answer'] = answer
+#         st.session_state['history'] = history
+#         st.session_state['next_session'] = session
+        
+        
+#         st.text(st.session_state['answer'])
         
 
 
-if st.session_state['history']:
-    with st.expander(label="Chat History", expanded=False):
-        st.text(st.session_state['history'])
+# if st.session_state['history']:
+#     with st.expander(label="Chat History", expanded=False):
+#         st.text(st.session_state['history'])
 
-    # # AWS Bedrock models
-    # if aws_bedrock_choice and aws_bedrock_choice != "none":
-    #     with tab2:
-    #         st.header("AWS Bedrock")
-    #         llm = llm_model_aws_bedrock
-    #         history, query, answer, session = rm.Milvus_chain(query, llm, prompt_template)
+#     # # AWS Bedrock models
+#     # if aws_bedrock_choice and aws_bedrock_choice != "none":
+#     #     with tab2:
+#     #         st.header("AWS Bedrock")
+#     #         llm = llm_model_aws_bedrock
+#     #         history, query, answer, session = rm.Milvus_chain(query, llm, prompt_template)
 
 
-    # elif aws_bedrock_choice:
-    #     with tab2:
-    #         st.error("AWS Bedrock models are not supported yet")
+#     # elif aws_bedrock_choice:
+#     #     with tab2:
+#     #         st.error("AWS Bedrock models are not supported yet")
 
         
 col1, col2, col3, col4 = st.columns(4)
@@ -224,13 +289,13 @@ if st.session_state['admin_button']:
         st.header("Admin activated")
         with col1:
             st.header("Create VectorDB")
-    
             create_button = st.button('Create VectorDB', type="primary")
             
             if create_button:
                 with st.spinner("Embedding Started"):
                     rm.create_collection()
                 st.success('Embedding Done')
+                
         with col2:
             st.header("**Update** Entitys")
             
@@ -242,6 +307,7 @@ if st.session_state['admin_button']:
                     entitiy_memory = rm.MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
                     entitiy_memory.update_entity(file_path, entitiy_memory.vectorstore)
                 st.success('Upsert Done')
+                
         with col3:
             st.header("**Create** Entitys")
             
@@ -255,6 +321,7 @@ if st.session_state['admin_button']:
                     entitiy_memory = rm.MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
                     entitiy_memory.create_or_update_collection(file_path)
                 st.success('Create Done')
+                
         with col4:
             st.header("Update base template")
             

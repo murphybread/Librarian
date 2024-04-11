@@ -1,5 +1,7 @@
 # Langchain for Dev
 import os
+import re
+
 
 ## Data
 from langchain_community.document_loaders import TextLoader,PyPDFLoader, Docx2txtLoader
@@ -65,26 +67,29 @@ class MilvusMemory:
     def memory_insert(self, query, session=""):
 
         if isinstance(query, str):
-            text_to_embed = query
+            text_for_embed = query
         else:
-            text_to_embed = query.page_content
+            text_for_embed = query.page_content
             
-        if not session.strip() or session == '.' or not Path(session).is_file():
+        print(f'in memory_insert query : {text_for_embed}')
+            
+        if len(session) < 1:
             session = str(uuid.uuid1())
-        else:
-            session = Path(session).as_posix()
-            expr = f"source == '{session}'"
-            expr = expr.encode('utf-8', 'ignore').decode('utf-8')
-            pks = self.vectorstore.get_pks(expr)
-            if pks:
-                self.collection.delete(collection_name=COLLECTION_NAME, ids=pks)
+    
+        session = Path(session).as_posix()
+        expr = f"source == '{session}'"
+        expr = expr.encode('utf-8', 'ignore').decode('utf-8')
+        pks = self.vectorstore.get_pks(expr)
+        print(f'Check exist memory session pks:{pks} , session:{session}, session type: {type(session)}')
+        if pks:
+            self.collection.delete(collection_name=COLLECTION_NAME, ids=pks)
 
 
-        vector = self.embeddings.embed_query(text_to_embed)                
-        data = {"source": session, "text": text_to_embed ,"vector": vector}
-        
+        vector = self.embeddings.embed_query(text_for_embed)                
+        data = {"source": session, "text": text_for_embed ,"vector": vector}
         self.collection.insert(collection_name= COLLECTION_NAME, data=data)
         print(f'session: {session} is inserted')
+        
         return session
     
     def update_entity(self, file_path, vectorstore):
@@ -135,24 +140,31 @@ class MilvusMemory:
         return None
     
     def create_or_update_collection(self, splits_path='./', chunk_size=CHUNK_SIZE):
+        book_count = 0
         # Transform splits_path to Path object 
         splits_path = Path(splits_path)
         
+        pattern = re.compile('.*[a-zA-Z]+.*\.md$')
+        
         # Use Path objects to navigate directories and files
         for file_path in splits_path.rglob('*.md'):
-            # Transform POSIX style string to file path 
-            session = file_path.as_posix()
             
-            print(f'after as_posix session: {session}')
-            # Using TextLoader and RecursiveCharacterTextSplitter to Process Files
-            loader = TextLoader(session)
-            documents = loader.load()
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size)
-            splits = text_splitter.split_documents(documents)
+            if pattern.match(file_path.name):
+                # Transform POSIX style string to file path 
+                session = file_path.as_posix()
+                
+                print(f'after as_posix session: {session}')
+                # Using TextLoader and RecursiveCharacterTextSplitter to Process Files
+                loader = TextLoader(session,encoding='utf-8')
+                documents = loader.load()
+                text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size)
+                splits = text_splitter.split_documents(documents)
 
-            # Update the collection for each split
-            for split in splits:
-                self.memory_insert(query=split, session=session)
+                # Update the collection for each split
+                for split in splits:
+                    self.memory_insert(query=split, session=session)
+                    book_count +=1
+        print(f"splits_path : {splits_path} book_count : {book_count}")
 
     def Milvus_chain(self, query, llm, prompt_template, session='',file_path_session=''):
         
@@ -162,11 +174,11 @@ class MilvusMemory:
             file_history, file_question, file_answer = invoke_from_retriever(query, llm, prompt_template, self.vectorstore, file_path_session)
             file_info = f"\nInformation: {file_path_session}\n{file_history}"
             
-            print(f'file_history : {file_history}')
-            print(f'file_question : {file_question}')
-            print(f'file_answer : {file_answer}')
+            # print(f'file_history : {file_history}')
+            # print(f'file_question : {file_question}')
+            # print(f'file_answer : {file_answer}')
             
-            
+                                 
             print(f"before file_path query : {query}")
             query = query + file_info
             print(f"after file_path query : {query}")
@@ -192,18 +204,13 @@ def invoke_from_retriever(query, llm, prompt_template, vectorstore , uuid=''):
     else:
         history = ""
     
+    
+    # print(f'type history : {type(history)}')
+    # print(f'history : {history}')
 
-    expr_base = f"source == '{BASE_FILE_PATH}'"
-    retrieverOptions_base = {"expr": expr_base , 'k' : 1}
-    pks_base = vectorstore.get_pks(expr_base)
-
-    if pks_base:
-        retriever_base = vectorstore.as_retriever(search_kwargs=retrieverOptions_base)
-        knowledge = retriever_base.get_relevant_documents("base_query")[0].page_content
-    else:
-        knowledge = "No base template in vectorstore"
-
-    print("knowledge\n" + knowledge)
+    
+    knowledge = get_content_from_path(BASE_FILE_PATH)
+    # print("knowledge\n" + knowledge)
     
     # Set up the components of the chain.
     setup_and_retrieval = RunnableParallel(
@@ -296,6 +303,19 @@ def vectorstore_milvus(embeddings , connection_args=CONNECTION_ARGS, collection_
     
     return vectorstore
 
+def get_content_from_path(file_path):
+    # Step 1: Create a Path object for the file
+    content_path = Path(file_path)
+
+# Step 2: Check if the file exists
+    if content_path.exists():
+        # Step 3: Open the file and read its contents into a string
+        with open(content_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+            return content
+    else:
+        print(f"The file {content_path} does not exist.")
+        return ""
 
 # docs_splits = split_multiple_documents('./', CHUNK_SIZE)
 # prompt_template = hub.pull("murphy/librarian_guide")
