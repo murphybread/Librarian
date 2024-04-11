@@ -338,11 +338,11 @@ if st.session_state['admin_button']:
         with col4:
             st.header("Delete entity")
             
-            
+            pk_id = st.text_input("input pks")
             base_button = st.button('Delete entity', type="primary")
             if base_button:
                 with st.spinner("Delete entity...."):
-                    pk_id = st.input("input opk")
+                    
                     rm.delete_entity(pk_id)
                     
                 st.success('Delete entity succed '+ pk_id)
