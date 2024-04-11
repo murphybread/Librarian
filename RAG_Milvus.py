@@ -320,6 +320,11 @@ def get_content_from_path(file_path):
         print(f"The file {content_path} does not exist.")
         return ""
 
+def delete_entity(pk_number):
+    client = MilvusClient(uri = MILVUS_URI, token= MILVUS_TOKEN)
+    res =  client.delete( collection_name=COLLECTION_NAME, ids=[pk_number])
+    return res
+
 # docs_splits = split_multiple_documents('./', CHUNK_SIZE)
 # prompt_template = hub.pull("murphy/librarian_guide")
 # embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)

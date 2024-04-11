@@ -336,17 +336,16 @@ if st.session_state['admin_button']:
                 st.success('Create Done')
                 
         with col4:
-            st.header("Update base template")
+            st.header("Delete entity")
             
             
-            base_button = st.button('Upsert base file', type="primary")
+            base_button = st.button('Delete entity', type="primary")
             if base_button:
-                with st.spinner("Upsert base template"):
-                    file_path = '../base_template.md'
-                    st.write(file_path)
-                    entitiy_memory = rm.MilvusMemory(embeddings,uri=MILVUS_URI, token=MILVUS_TOKEN, collection_name=COLLECTION_NAME)
-                    entitiy_memory.update_entity(file_path, entitiy_memory.vectorstore)
-                st.success('Update Base temlplate Done')
+                with st.spinner("Delete entity...."):
+                    pk_id = st.input("input opk")
+                    rm.delete_entity(pk_id)
+                    
+                st.success('Delete entity succed '+ pk_id)
             
 
 
