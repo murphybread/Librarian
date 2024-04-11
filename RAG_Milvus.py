@@ -144,7 +144,7 @@ class MilvusMemory:
         # Transform splits_path to Path object 
         splits_path = Path(splits_path)
         
-        pattern = re.compile('.*[a-zA-Z]+.*\.md$')
+        pattern = re.compile('.*[a-zA-Z]+.*\\.md$')
         
         # Use Path objects to navigate directories and files
         for file_path in splits_path.rglob('*.md'):
@@ -242,17 +242,19 @@ def split_multiple_documents(current_path, chunk_size: int):
     return all_splits
 
 
-def extract_path(query, keyword='file_path: '):    
-    # 'file_path: ' Find path by ketword        
-    if keyword not in query:
+def extract_path(query):
+    keywords = 'file_path: '
+    # 'file_path: ' Find path by ketword 
+    print(f'kewords : {keywords}')
+    if keywords not in query:
         return ''
-    start_index = query.find(keyword)
+    start_index = query.find(keywords)
     prefix = '../../'
      
     
     if start_index != -1:
         # 'file_path: ' 
-        start_index += len(keyword)
+        start_index += len(keywords)
         temp_extract = query[start_index:]
 
         # Find postion '.md' from temp_extract string
@@ -261,6 +263,7 @@ def extract_path(query, keyword='file_path: '):
         if end_index != -1:
             # Extract final path that include '.md'
             extracted_path = temp_extract[:end_index + len('.md')]
+            print(f'extracted_path {extracted_path}')
             return prefix + extracted_path
         else:
             print("'.md' not found.")

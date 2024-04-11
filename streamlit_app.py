@@ -61,36 +61,12 @@ COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 CONNECTION_ARGS = {'uri': MILVUS_URI, 'token': MILVUS_TOKEN}
 
 
-
 url = "https://www.murphybooks.me"
-st.set_page_config(
-    page_title="Murphy's Library",
-    menu_items={
-        'About': url
-        
-    })
-st.title(f"[Murphy's Library]({url})\n **Charles, the librarian, will help you find information in Murphy's library.\nHe'll give you general answers in the first conversation. But, If you have a memory session, or if you have a file path, he'll help you in more detail.**") # Page title
 
 
 
 
-
-
-
-
-
-model_name1 = 'gpt-4-0125-preview'
-
-model_name2 = 'gpt-3.5-turbo-0125'
-model_name3 = 'amazon.titan-text-express-v1'
-# embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
-
-
-# llm_model_openai_gpt3_5 = ChatOpenAI(model_name=model_name1, temperature=0) 
-# llm_model_openai_gpt4 = ChatOpenAI(model_name=model_name2, temperature=0) 
-llm_model_aws_bedrock = "S"#Bedrock(model_id = 'amazon.titan-text-express-v1', region_name="us-east-1")
-
-
+# Setting for statue session 
 if 'initial' not in st.session_state:
     st.session_state['initial'] = True
 
@@ -118,6 +94,37 @@ if "messages" not in st.session_state:
     
 if "next_session" not in st.session_state:
     st.session_state.next_session = ""
+
+
+st.set_page_config(
+    page_title="Murphy's Library",
+    menu_items={
+        'About': url
+        
+    })
+st.title(f"[Murphy's Library]({url})\n **Charles, the librarian, will help you find information in Murphy's library.\nHe'll give you general answers in the first conversation.** \n Use the special pattern 'file_path: ' to find more details") # Page title
+
+st.info("Your memory session " + st.session_state['next_session'], icon="ℹ️")
+
+
+
+
+
+
+
+model_name1 = 'gpt-4-0125-preview'
+
+model_name2 = 'gpt-3.5-turbo-0125'
+model_name3 = 'amazon.titan-text-express-v1'
+# embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
+
+
+# llm_model_openai_gpt3_5 = ChatOpenAI(model_name=model_name1, temperature=0) 
+# llm_model_openai_gpt4 = ChatOpenAI(model_name=model_name2, temperature=0) 
+llm_model_aws_bedrock = "S"#Bedrock(model_id = 'amazon.titan-text-express-v1', region_name="us-east-1")
+
+
+
 
 
 # Use sidebar for model selection
@@ -191,10 +198,10 @@ def get_respone(llm,milvus,query,session, file_path_session):
         
     history, question, answer, session = milvus.Milvus_chain(query, llm, prompt_template, session,file_path_session)
     
-    st.markdown(history)
-    st.markdown(question)
-    st.markdown(answer)
-    st.markdown(session)
+    # st.markdown(history)
+    # st.markdown(question)
+    # st.markdown(answer)
+    # st.markdown(session)
     
     # if 'Answer:' in answer:
     #     return answer.replace('Answer:', ''), session
@@ -205,11 +212,17 @@ def get_respone(llm,milvus,query,session, file_path_session):
 
 
 
+
 if prompt:= st.chat_input("If you have any questions, can you write them here?"):
     if st.session_state['next_session']:
         memory_session = st.session_state['next_session']
     else:
         memory_session = ''
+    if len(manual_session) >= 35 :
+        memory_session = manual_session
+        
+        
+    
         
     
     with st.chat_message("user"):
@@ -220,8 +233,8 @@ if prompt:= st.chat_input("If you have any questions, can you write them here?")
         
         
         response, session = get_respone(llm,milvus,prompt , memory_session, info_file_path)
-        st.write(f"memory_session: {memory_session}")
-        st.write(f"session: {session}")
+        # st.write(f"memory_session: {memory_session}")
+        # st.write(f"session: {session}")
         st.session_state['next_session'] = session
     
     with st.chat_message("assistant",avatar='50486329.png'):
