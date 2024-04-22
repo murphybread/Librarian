@@ -3,3 +3,6 @@
 *.json
 __pycache__/
 .streamlit/
+
+#
+!base_template.md
