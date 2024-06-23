@@ -70,10 +70,17 @@ def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
             except Exception as e:
                 print(f"Failed to delete existing documents for {source}: {e}")
 
-            new_docs = [Document(page_content=doc.page_content, metadata={"source": source}) for doc in splits]
+            new_docs = []
+            for doc in splits:
+                text_content = doc.page_content
+                vector = embeddings.embed_query(text_content)
+                data = {"source": source, "text": text_content, "vector": vector}
+                new_docs.append(data)
 
             try:
-                vectorstore.add_documents(new_docs)
+                
+                collection.insert(new_docs)
+                
                 print(f"Inserted documents from {source}.")
             except Exception as e:
                 print(f"Failed to insert documents for {source}: {e}")
