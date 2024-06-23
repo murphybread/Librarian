@@ -1,9 +1,10 @@
+# streamlit_app.py
 import os
+import uuid
 import streamlit as st
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain import hub
 import RAG_Milvus as rm
-import uuid
 
 # Environment Variables
 os.environ['LANGCHAIN_TRACING_V2'] = 'True'
@@ -40,9 +41,6 @@ if 'initial' not in st.session_state:
 if 'admin_status' not in st.session_state:
     st.session_state['admin_status'] = False
 
-if 'manual' not in st.session_state:
-    st.session_state['manual'] = ''
-
 if 'start' not in st.session_state:
     st.session_state['start'] = False
 
@@ -60,7 +58,7 @@ if "messages" not in st.session_state:
 
 if "next_session" not in st.session_state:
     st.session_state["next_session"] = str(uuid.uuid4())
-    
+
 st.set_page_config(
     page_title="Murphy's Library",
     menu_items={'About': "https://www.murphybooks.me"}
@@ -83,8 +81,6 @@ with st.sidebar:
 
     pwd = st.text_input('Please enter your password to enable Admin tab', type='password')
     st.session_state['admin_button'] = pwd == st.secrets["PASSWORD"]
-
-    manual_session = st.text_input("If you have information about the last session, you can continue the previous conversation.", placeholder="Enter your Session string", key='widget')
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"], avatar='50486329.png' if message["role"] != 'user' else None):
@@ -109,9 +105,12 @@ if openai_choice != "none":
 else:
     st.error("OpenAI models are not selected")
 
-def get_response(llm, milvus, query, session, file_path_session):
-    history, question, answer = rm.invoke_from_retriever(query, llm, prompt_template, milvus, session)
-    return answer, session
+def get_response(llm, vectorstore, embeddings, collection_name, query, session, file_path_session):
+    return rm.Milvus_chain(query, llm, prompt_template, vectorstore, embeddings, collection_name, session, file_path_session)
+
+# Ensure session state for continuing conversations
+if "next_session" not in st.session_state:
+    st.session_state["next_session"] = str(uuid.uuid4())
 
 if prompt := st.chat_input("If you have any questions, can you write them here?"):
     memory_session = st.session_state['next_session']
@@ -120,12 +119,12 @@ if prompt := st.chat_input("If you have any questions, can you write them here?"
         st.markdown(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
         info_file_path = rm.extract_path(prompt)
-        response, session = get_response(llm, milvus, prompt, memory_session, info_file_path)
+        history, question, answer, session = get_response(llm, milvus, embeddings, COLLECTION_NAME, prompt, memory_session, info_file_path)
         st.session_state['next_session'] = session
 
     with st.chat_message("assistant", avatar='50486329.png'):
-        st.markdown(response)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.markdown(answer)
+        st.session_state.messages.append({"role": "assistant", "content": answer})
 
 # Define tabs
 tab1, tab2 = st.tabs(["OpenAI", "Admin"])

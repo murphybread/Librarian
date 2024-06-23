@@ -1,7 +1,7 @@
 import os
 import re
 from pathlib import Path
-from langchain_community.document_loaders import TextLoader, PyPDFLoader, Docx2txtLoader
+from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents.base import Document
 from langchain_community.vectorstores import Milvus
@@ -26,11 +26,14 @@ MILVUS_URI = os.getenv("MILVUS_URI")
 CONNECTION_ARGS = {'uri': MILVUS_URI, 'token': MILVUS_TOKEN}
 COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 
+embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
+
+# Ensure connection to Milvus is established
+connections.connect("default", uri=MILVUS_URI, token=MILVUS_TOKEN)
 
 def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
     splits_path = Path(splits_path)
     pattern = re.compile(r'.*[a-zA-Z]+.*\.md$')
-    embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
 
     vectorstore = Milvus(
         embedding_function=embeddings,
@@ -40,7 +43,6 @@ def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
         auto_id=True
     )
 
-    connections.connect(uri=MILVUS_URI, token=MILVUS_TOKEN)
     collection = Collection(COLLECTION_NAME)
     collection.load()  # Ensure collection is loaded into memory
 
@@ -63,7 +65,7 @@ def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
                 if pks:
                     expr_delete = f"Auto_id in {pks}"
                     print(f"Deleting documents with expr: {expr_delete}")
-                    delete_result = collection.delete(expr_delete)
+                    delete_result = collection.delete(expr=expr_delete)
                     print(f"Deleted outdated documents from {source}. Delete result: {delete_result}")
                 else:
                     print(f"No valid primary keys found for {source}, skipping deletion.")
@@ -78,28 +80,85 @@ def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
                 new_docs.append(data)
 
             try:
-                
                 collection.insert(new_docs)
-                
                 print(f"Inserted documents from {source}.")
             except Exception as e:
                 print(f"Failed to insert documents for {source}: {e}")
 
+def memory_insert(vectorstore, embeddings, collection_name, query, session=""):
+    collection = Collection(collection_name)
 
+    if isinstance(query, str):
+        text_for_embed = query
+    else:
+        text_for_embed = query.page_content
+        
+    print(f'in memory_insert query : {text_for_embed}')
+        
+    if len(session) < 1:
+        session = str(uuid.uuid1())
+
+    session = Path(session).as_posix()
+    expr = f"source == '{session}'"
+    expr = expr.encode('utf-8', 'ignore').decode('utf-8')
+    pks = vectorstore.get_pks(expr)
+    print(f'Check exist memory session pks:{pks} , session:{session}, session type: {type(session)}')
+    if pks:
+        collection.delete(expr=f"source == '{session}'")
+
+    vector = embeddings.embed_query(text_for_embed)
+    data = {"source": session, "text": text_for_embed, "vector": vector}
+    collection.insert([data])  # Ensure data is inserted as a list of dictionaries
+    print(f'session: {session} is inserted')
+    
+    return session
+
+def Milvus_chain(query, llm, prompt_template, vectorstore, embeddings, collection_name, session='', file_path_session=''):
+    print(f"before invoke from milvus_chain session : {session} ")
+    print(f"before invoke from milvus_chain file_path_session : {file_path_session} ")
+    
+    if len(file_path_session) > 2:
+        file_history, file_question, file_answer = invoke_from_retriever(query, llm, prompt_template, vectorstore, file_path_session)
+        file_info = f"\nInformation: {file_path_session}\n{file_history}"
+        
+        print(f"before file_path query : {query}")
+        query = query + file_info
+        print(f"after file_path query : {query}")
+    
+    history, question, answer = invoke_from_retriever(query, llm, prompt_template, vectorstore, session)
+    print(f"after invoke milvus_chain question : {question} ")
+    print(f"after invoke milvus_chain answer : {answer} ")
+    
+    # Use the memory_insert function to update the session
+    session = memory_insert(vectorstore, embeddings, collection_name, history + "\nHUMAN:" + question + "\nAI:" + answer, session)
+    
+    return history, question, answer, session
 
 def invoke_from_retriever(query, llm, prompt_template, vectorstore, uuid=''):
     expr = f"source == '{uuid}'"
-    retrieverOptions = {"expr": expr , 'k' : 1}
+    retrieverOptions = {"expr": expr, 'k': 1}
     pks = vectorstore.get_pks(expr)
     
     print(f'pks: {pks}')
     
-    if pks:        
+    if pks and pks[0] is not None:
         retriever = vectorstore.as_retriever(search_kwargs=retrieverOptions)
-        history = retriever.get_relevant_documents(query)[0].page_content + "\n"
+        relevant_docs = retriever.get_relevant_documents(query)
+        if relevant_docs and relevant_docs[0].metadata.get('text'):
+            history = relevant_docs[0].metadata['text'] + "\n"
+        else:
+            history = ""
     else:
         history = ""
-    
+        vector = embeddings.embed_query(query)
+        new_docs = [{"source": uuid, "text": query, "vector": vector}]
+        try:
+            collection = Collection(COLLECTION_NAME)
+            collection.insert(new_docs)
+            print(f"Inserted new entity for session {uuid}.")
+        except Exception as e:
+            print(f"Failed to insert new entity for session {uuid}: {e}")
+
     knowledge = get_content_from_path(BASE_FILE_PATH)
     
     setup_and_retrieval = RunnableParallel(
@@ -125,21 +184,13 @@ def get_content_from_path(file_path):
         return ""
 
 def delete_entity(auto_id):
-    # Connect to Milvus
-    connections.connect(
-        uri=MILVUS_URI,
-        token=MILVUS_TOKEN,
-    )
-    # Retrieve the collection
     collection = Collection(COLLECTION_NAME)
-    # Check if the entity exists
     expr_check = f"Auto_id == {auto_id}"
     results = collection.query(expr_check)
     if results:
-        # Delete the entity if it exists
         expr_delete = f"Auto_id in [{auto_id}]"
         try:
-            delete_result = collection.delete(expr_delete)
+            delete_result = collection.delete(expr=expr_delete)
             print(f"Delete result: {delete_result}")
         except Exception as e:
             print(f"Failed to delete entity with Auto_id {auto_id}: {e}")
