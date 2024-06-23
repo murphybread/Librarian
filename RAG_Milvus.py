@@ -26,6 +26,7 @@ MILVUS_URI = os.getenv("MILVUS_URI")
 CONNECTION_ARGS = {'uri': MILVUS_URI, 'token': MILVUS_TOKEN}
 COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 
+
 def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
     splits_path = Path(splits_path)
     pattern = re.compile('.*[a-zA-Z]+.*\\.md$')
@@ -48,17 +49,22 @@ def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
 
             # Check if the entity already exists
             source = file_path.as_posix()
+            print(f'Source: {source}')
             expr = f"source == '{source}'"
             pks = vectorstore.get_pks(expr)
 
             if pks:  # Ensure that pks is not empty
                 # Delete the existing documents before inserting the new ones
-                vectorstore.delete(ids=pks)
+                vectorstore.delete(pks)
                 print(f"Deleted outdated documents from {source}.")
             
+            # Create new documents with metadata
+            new_docs = [Document(page_content=doc.page_content, metadata={"source": source}) for doc in splits]
+            
             # Add new documents to the vector store
-            vectorstore.add_documents(splits)
+            vectorstore.add_documents(new_docs)
             print(f"Inserted documents from {source}.")
+
 
 def invoke_from_retriever(query, llm, prompt_template, vectorstore, uuid=''):    
     expr = f"source == '{uuid}'"
