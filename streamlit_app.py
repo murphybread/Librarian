@@ -128,14 +128,14 @@ if prompt := st.chat_input("If you have any questions, can you write them here?"
     st.session_state.messages.append({"role": "assistant", "content": response})
 
 # Define tabs
-tab1, tab2, tab3 = st.tabs(["OpenAI", "AWS Bedrock **(Not Supported)**", "Admin"])
+tab1, tab2 = st.tabs(["OpenAI", "Admin"])
 
 with tab1:
     st.header("OpenAI")
     # OpenAI tab content
 
 if st.session_state['admin_button']:
-    with tab3:
+    with tab2:
         st.header("Admin activated")
         col1, col2, col3, col4 = st.columns(4)
         with col1:
