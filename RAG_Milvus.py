@@ -29,7 +29,7 @@ COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 
 def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
     splits_path = Path(splits_path)
-    pattern = re.compile('.*[a-zA-Z]+.*\\.md$')
+    pattern = re.compile(r'.*[a-zA-Z]+.*\.md$')
     embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL_NAME)
 
     vectorstore = Milvus(
@@ -40,30 +40,44 @@ def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
         auto_id=True
     )
 
+    connections.connect(uri=MILVUS_URI, token=MILVUS_TOKEN)
+    collection = Collection(COLLECTION_NAME)
+    collection.load()  # Ensure collection is loaded into memory
+
     for file_path in splits_path.rglob('*.md'):
         if pattern.match(file_path.name):
             loader = TextLoader(file_path.as_posix(), encoding='utf-8')
             documents = loader.load()
             text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size)
             splits = text_splitter.split_documents(documents)
-
-            # Check if the entity already exists
             source = file_path.as_posix()
             print(f'Source: {source}')
-            expr = f"source == '{source}'"
-            pks = vectorstore.get_pks(expr)
+            expr = f'source == "{source}"'
+            print(f'Query expression: {expr}')
 
-            if pks:  # Ensure that pks is not empty
-                # Delete the existing documents before inserting the new ones
-                vectorstore.delete(pks)
-                print(f"Deleted outdated documents from {source}.")
-            
-            # Create new documents with metadata
+            try:
+                res = collection.query(expr=expr, output_fields=["Auto_id"])
+                pks = [item["Auto_id"] for item in res]
+                print(f'pks: {pks}, pkstype: {type(pks)}')
+
+                if pks:
+                    expr_delete = f"Auto_id in {pks}"
+                    print(f"Deleting documents with expr: {expr_delete}")
+                    delete_result = collection.delete(expr_delete)
+                    print(f"Deleted outdated documents from {source}. Delete result: {delete_result}")
+                else:
+                    print(f"No valid primary keys found for {source}, skipping deletion.")
+            except Exception as e:
+                print(f"Failed to delete existing documents for {source}: {e}")
+
             new_docs = [Document(page_content=doc.page_content, metadata={"source": source}) for doc in splits]
-            
-            # Add new documents to the vector store
-            vectorstore.add_documents(new_docs)
-            print(f"Inserted documents from {source}.")
+
+            try:
+                vectorstore.add_documents(new_docs)
+                print(f"Inserted documents from {source}.")
+            except Exception as e:
+                print(f"Failed to insert documents for {source}: {e}")
+
 
 
 def invoke_from_retriever(query, llm, prompt_template, vectorstore, uuid=''):    

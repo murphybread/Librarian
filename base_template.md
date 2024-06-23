@@ -281,7 +281,7 @@
  description: Let's take a look at one of the popular DL modeling domains, computer vision.
 
 ## 500/520/520.00/520.00 a.md
- description: This is just arhive information for about voxelization (voxel means volume pixel ) from Open3D library.
+ description: This A is just arhive information for about voxelization (voxel means volume pixel ) from Open3D library.
 
 ## 500/520/520.00/520.00.md
  description: Let's take a look at one of the largest deep learning model domains, computer vision.
@@ -329,7 +329,9 @@
  description: In implementation This minor category cover Frameworks.
 
 ## 600/630/630.00/630.00 a.md
- description: scikit-learn basic functions. Representatively ML library not DL, this is defacto.
+ description: scikit-learn basic functions. Representatively
+
+ ML library not DL, this is defacto.
 
 ## 600/630/630.00/630.00.md
  description: ML framwork about scikit-learn.

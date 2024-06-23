@@ -25,7 +25,7 @@ connections.connect(
 collection = Collection(COLLECTION_NAME)
 
 # Define the auto_id
-auto_id = 450644945527654614
+auto_id = 450644945527654444
 
 # Check if the entity exists
 expr_check = f"Auto_id == {auto_id}"
