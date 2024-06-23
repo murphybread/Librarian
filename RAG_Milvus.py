@@ -51,12 +51,14 @@ def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
             expr = f"source == '{source}'"
             pks = vectorstore.get_pks(expr)
 
-            if not pks:
-                # Add new documents to the vector store if not already present
-                vectorstore.add_documents(splits)
-                print(f"Inserted documents from {source}.")
-            else:
-                print(f"Documents from {source} already exist. No insertion performed.")
+            if pks:  # Ensure that pks is not empty
+                # Delete the existing documents before inserting the new ones
+                vectorstore.delete(ids=pks)
+                print(f"Deleted outdated documents from {source}.")
+            
+            # Add new documents to the vector store
+            vectorstore.add_documents(splits)
+            print(f"Inserted documents from {source}.")
 
 def invoke_from_retriever(query, llm, prompt_template, vectorstore, uuid=''):    
     expr = f"source == '{uuid}'"
