@@ -75,7 +75,7 @@ print(pks, type(pks))
 
 from pymilvus import Collection
 
-pks = [448986445593458408]  # Provide a list of entity IDs to delete
+pks = [450644945527654430]  # Provide a list of entity IDs to delete
 
 client = MilvusClient(uri = uri, token= token)
 res =  client.delete( collection_name=COLLECTION_NAME, ids=pks)

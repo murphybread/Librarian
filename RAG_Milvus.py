@@ -96,19 +96,28 @@ def get_content_from_path(file_path):
 
     
 def delete_entity(auto_id):
+    # Connect to Milvus
     connections.connect(
-    uri=MILVUS_URI,
-    token=MILVUS_TOKEN,
+        uri=MILVUS_URI,
+        token=MILVUS_TOKEN,
     )
-    client = MilvusClient(uri=MILVUS_URI, token=MILVUS_TOKEN)
-    expr = f"auto_id in [{auto_id}]"
-    res = None
-    try:
-        res = client.delete(collection_name=COLLECTION_NAME, expr=expr)
-        print(f"Delete result: {res}")
-    except Exception as e:
-        print(f"Failed to delete entity with Auto_id {auto_id}: {e}")
-    return res
+    # Retrieve the collection
+    collection = Collection(COLLECTION_NAME)
+    # Check if the entity exists
+    expr_check = f"Auto_id == {auto_id}"
+    results = collection.query(expr_check)
+    if results:
+        # Delete the entity if it exists
+        expr_delete = f"Auto_id in [{auto_id}]"
+        try:
+            delete_result = collection.delete(expr_delete)
+            print(f"Delete result: {delete_result}")
+        except Exception as e:
+            print(f"Failed to delete entity with Auto_id {auto_id}: {e}")
+    else:
+        print(f"No entity found with Auto_id: {auto_id}")
+    return results
+
 
 def extract_path(query):
     keywords = 'file_path: '

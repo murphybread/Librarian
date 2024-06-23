@@ -2,8 +2,6 @@ import os
 import re
 from pymilvus import Collection, connections, MilvusClient
 from dotenv import load_dotenv
-from langchain_community.vectorstores import Milvus
-
 
 # Load environment variables
 load_dotenv()
@@ -18,29 +16,31 @@ CONNECTION_ARGS = {'uri': MILVUS_URI, 'token': MILVUS_TOKEN}
 COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 
 # Connect to Milvus
-
+connections.connect(
+    uri=MILVUS_URI,
+    token=MILVUS_TOKEN
+)
 
 # Retrieve the collection
-vdb = Milvus(
-            embedding_function=EMBEDDING_MODEL_NAME,
-            connection_args=CONNECTION_ARGS,
-            collection_name=COLLECTION_NAME,
-            drop_old=False,
-            auto_id=True
-        )
-
+collection = Collection(COLLECTION_NAME)
 
 # Define the auto_id
-auto_id = "450644945527654610"
+auto_id = 450644945527654614
 
 # Check if the entity exists
-expr = f"Auto_id == {auto_id}"
-pks = vdb.get_pks(expr)
+expr_check = f"Auto_id == {auto_id}"
+results = collection.query(expr_check)
+print(collection.schema)
 
-if pks:
-    print(f"Entity found: {pks}")
+if results:
+    print(f"Entity found: {results}")
 else:
-    print(f"No entity found with auto_id: {auto_id}")
+    print(f"No entity found with Auto_id: {auto_id}")
 
-
-print(vdb.delete(pks))
+# Delete the entity if it exists
+expr_delete = f"Auto_id in [{auto_id}]"
+try:
+    delete_result = collection.delete(expr_delete)
+    print(f"Delete result: {delete_result}")
+except Exception as e:
+    print(f"Failed to delete entity with Auto_id {auto_id}: {e}")
