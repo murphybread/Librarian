@@ -87,7 +87,7 @@ def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
 
 
 
-def invoke_from_retriever(query, llm, prompt_template, vectorstore, uuid=''):    
+def invoke_from_retriever(query, llm, prompt_template, vectorstore, uuid=''):
     expr = f"source == '{uuid}'"
     retrieverOptions = {"expr": expr , 'k' : 1}
     pks = vectorstore.get_pks(expr)
@@ -111,7 +111,7 @@ def invoke_from_retriever(query, llm, prompt_template, vectorstore, uuid=''):
     rag_chain = setup_and_retrieval | prompt_template | llm
     answer = rag_chain.invoke(query).content.rstrip("\nNone")
     
-    return history, query, answer
+    return history, uuid, answer
 
 def get_content_from_path(file_path):
     content_path = Path(file_path)

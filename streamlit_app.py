@@ -3,6 +3,7 @@ import streamlit as st
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain import hub
 import RAG_Milvus as rm
+import uuid
 
 # Environment Variables
 os.environ['LANGCHAIN_TRACING_V2'] = 'True'
@@ -58,8 +59,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "next_session" not in st.session_state:
-    st.session_state.next_session = ""
-
+    st.session_state["next_session"] = str(uuid.uuid4())
+    
 st.set_page_config(
     page_title="Murphy's Library",
     menu_items={'About': "https://www.murphybooks.me"}
@@ -113,9 +114,8 @@ def get_response(llm, milvus, query, session, file_path_session):
     return answer, session
 
 if prompt := st.chat_input("If you have any questions, can you write them here?"):
-    memory_session = st.session_state['next_session'] if st.session_state['next_session'] else ''
-    memory_session = manual_session if len(manual_session) >= 35 else memory_session
-
+    memory_session = st.session_state['next_session']
+    
     with st.chat_message("user"):
         st.markdown(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -125,7 +125,7 @@ if prompt := st.chat_input("If you have any questions, can you write them here?"
 
     with st.chat_message("assistant", avatar='50486329.png'):
         st.markdown(response)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
 # Define tabs
 tab1, tab2 = st.tabs(["OpenAI", "Admin"])
