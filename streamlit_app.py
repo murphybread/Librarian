@@ -134,10 +134,6 @@ with tab1:
     st.header("OpenAI")
     # OpenAI tab content
 
-with tab2:
-    st.header("AWS Bedrock **(Not Supported)**")
-    # AWS Bedrock tab content
-
 if st.session_state['admin_button']:
     with tab3:
         st.header("Admin activated")
