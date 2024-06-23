@@ -45,16 +45,18 @@ def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
             documents = loader.load()
             text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size)
             splits = text_splitter.split_documents(documents)
-            
+
             # Check if the entity already exists
-            for split in splits:
-                source = split.metadata.get("source")
-                if source:
-                    pks = vectorstore.get_pks(expr=f"source == '{source}'")
-                    if pks:
-                        delete_entity(pks[0])
-            
-            vectorstore.add_documents(splits)
+            source = file_path.as_posix()
+            expr = f"source == '{source}'"
+            pks = vectorstore.get_pks(expr)
+
+            if not pks:
+                # Add new documents to the vector store if not already present
+                vectorstore.add_documents(splits)
+                print(f"Inserted documents from {source}.")
+            else:
+                print(f"Documents from {source} already exist. No insertion performed.")
 
 def invoke_from_retriever(query, llm, prompt_template, vectorstore, uuid=''):    
     expr = f"source == '{uuid}'"
@@ -93,8 +95,6 @@ def get_content_from_path(file_path):
         print(f"The file {content_path} does not exist.")
         return ""
 
-
-    
 def delete_entity(auto_id):
     # Connect to Milvus
     connections.connect(
@@ -117,7 +117,6 @@ def delete_entity(auto_id):
     else:
         print(f"No entity found with Auto_id: {auto_id}")
     return results
-
 
 def extract_path(query):
     keywords = 'file_path: '
