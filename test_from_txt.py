@@ -1,22 +1,46 @@
-from langchain_text_splitters import CharacterTextSplitter, RecursiveCharacterTextSplitter
-from langchain.docstore.document import Document
+import os
+import re
+from pymilvus import Collection, connections, MilvusClient
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
 
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE"))
+MODEL_NAME = os.getenv("MODEL_NAME")
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME")
+BASE_FILE_PATH = os.getenv("BASE_FILE_PATH")
+MILVUS_TOKEN = os.getenv("MILVUS_TOKEN")
+MILVUS_URI = os.getenv("MILVUS_URI")
+CONNECTION_ARGS = {'uri': MILVUS_URI, 'token': MILVUS_TOKEN}
+COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+# Connect to Milvus
+connections.connect(
+    uri=MILVUS_URI,
+    token=MILVUS_TOKEN
+)
 
-s = "HUMAN:we start talked about gitlab\nAI:Based on the information available in Murphy's library, GitLab is mentioned as a DevSecOps solution that can be installed for enterprise use. This suggests that GitLab offers features and functionalities tailored towards integrating development, security, and operations, making it suitable for enterprise-level applications.\n\nfile_path: 200\\210\\210.20\\210.20 a.md\ndescription: The solution about Gitlab. GitLab is one devsecops solution and can be installed for enterprise."
-doc =  Document(page_content=s)
-dc=  text_splitter.split_documents([doc])
+# Retrieve the collection
+collection = Collection(COLLECTION_NAME)
 
-print(dc)
+# Define the auto_id
+auto_id = 450644945527654610
 
+# Check if the entity exists
+expr_check = f"Auto_id == {auto_id}"
+results = collection.query(expr_check)
+print(collection.schema)
 
-from langchain_community.document_loaders import TextLoader
+if results:
+    print(f"Entity found: {results}")
+else:
+    print(f"No entity found with auto_id: {auto_id}")
 
-loader = TextLoader('./test.txt', encoding='utf-8')
-documents = loader.load()
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-docs = text_splitter.split_documents(documents)
-
-print(docs)
+# Delete the entity if it exists
+expr_delete = f"Auto_id in [{auto_id}]"
+try:
+    delete_result = collection.delete(expr_delete)
+    print(f"Delete result: {delete_result}")
+except Exception as e:
+    print(f"Failed to delete entity with auto_id {auto_id}: {e}")

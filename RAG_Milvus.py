@@ -45,6 +45,15 @@ def create_or_update_collection(splits_path='./', chunk_size=CHUNK_SIZE):
             documents = loader.load()
             text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size)
             splits = text_splitter.split_documents(documents)
+            
+            # Check if the entity already exists
+            for split in splits:
+                source = split.metadata.get("source")
+                if source:
+                    pks = vectorstore.get_pks(expr=f"source == '{source}'")
+                    if pks:
+                        delete_entity(pks[0])
+            
             vectorstore.add_documents(splits)
 
 def invoke_from_retriever(query, llm, prompt_template, vectorstore, uuid=''):    
@@ -84,9 +93,21 @@ def get_content_from_path(file_path):
         print(f"The file {content_path} does not exist.")
         return ""
 
-def delete_entity(pk_number):
+
+    
+def delete_entity(auto_id):
+    connections.connect(
+    uri=MILVUS_URI,
+    token=MILVUS_TOKEN,
+    )
     client = MilvusClient(uri=MILVUS_URI, token=MILVUS_TOKEN)
-    res = client.delete(collection_name=COLLECTION_NAME, ids=[pk_number])
+    expr = f"auto_id in [{auto_id}]"
+    res = None
+    try:
+        res = client.delete(collection_name=COLLECTION_NAME, expr=expr)
+        print(f"Delete result: {res}")
+    except Exception as e:
+        print(f"Failed to delete entity with Auto_id {auto_id}: {e}")
     return res
 
 def extract_path(query):

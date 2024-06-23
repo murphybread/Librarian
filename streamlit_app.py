@@ -24,7 +24,7 @@ os.environ['COLLECTION_NAME'] = st.secrets["COLLECTION_NAME"]
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE"))
 MODEL_NAME = os.getenv("MODEL_NAME")
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME")
-BASE_FILE_PATH= os.getenv("BASE_FILE_PATH")
+BASE_FILE_PATH = os.getenv("BASE_FILE_PATH")
 
 # Milvus env
 MILVUS_TOKEN = os.getenv("MILVUS_TOKEN")
@@ -127,6 +127,17 @@ if prompt := st.chat_input("If you have any questions, can you write them here?"
         st.markdown(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
 
+# Define tabs
+tab1, tab2, tab3 = st.tabs(["OpenAI", "AWS Bedrock **(Not Supported)**", "Admin"])
+
+with tab1:
+    st.header("OpenAI")
+    # OpenAI tab content
+
+with tab2:
+    st.header("AWS Bedrock **(Not Supported)**")
+    # AWS Bedrock tab content
+
 if st.session_state['admin_button']:
     with tab3:
         st.header("Admin activated")
@@ -158,9 +169,16 @@ if st.session_state['admin_button']:
                 st.success('Create Done')
         with col4:
             st.header("Delete entity")
-            pk_id = st.text_input("Input pks")
+            pk_id = st.text_input("Input Auto_id")
             base_button = st.button('Delete entity', type="primary")
             if base_button:
                 with st.spinner("Delete entity...."):
-                    rm.delete_entity(pk_id)
-                st.success('Delete entity succeeded ' + pk_id)
+                    if pk_id:
+                        try:
+                            auto_id = int(pk_id)
+                            rm.delete_entity(auto_id)
+                            st.success('Delete entity succeeded ' + str(auto_id))
+                        except ValueError:
+                            st.error('Please input a valid Auto_id as a number.')
+                    else:
+                        st.error('Please input a valid Auto_id.')
