@@ -160,6 +160,8 @@ def invoke_from_retriever(query, llm, prompt_template, vectorstore, uuid=''):
             print(f"Failed to insert new entity for session {uuid}: {e}")
 
     knowledge = get_content_from_path(BASE_FILE_PATH)
+    print(f'knowledge: {knowledge}')  # Correct string interpolation
+    print(f'BASE_FILE_PATH : {BASE_FILE_PATH}')           # Correct direct string output
     
     setup_and_retrieval = RunnableParallel(
         Library_base_knowledge=RunnableLambda(lambda _: knowledge),
