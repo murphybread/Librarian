@@ -64,7 +64,7 @@ st.set_page_config(
     menu_items={'About': "https://www.murphybooks.me"}
 )
 st.title(f"[Murphy's Library](https://www.murphybooks.me)\n **Charles, the librarian, will help you find information in Murphy's library.\nHe'll give you general answers in the first conversation.**")
-st.success("If you're unsure what to ask,simply say, Could you recommend a few posts?", icon="✅")
+st.success("If you're unsure what to ask,simply say -> Could you recommend a few posts anything else?", icon="✅")
 st.info("Your memory session " + st.session_state['next_session'], icon="ℹ️")
 
 model_name1 = os.environ['MODEL_NAME']
