@@ -10,7 +10,7 @@
 https://github.com/murphybread/Librarian
 
 아키텍쳐
-![Screenshot 2024-04-04 at 1 38 51 PM 1](https://github.com/murphybread/Librarian/assets/50486329/5a52ac17-1b65-472e-a07f-e075a1e2e333)
+![Image](https://github.com/user-attachments/assets/f01b12d2-3bdd-49e5-a508-9eb94f408631)
 
 
 
